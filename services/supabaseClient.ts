@@ -1,6 +1,6 @@
 
 import { createClient } from '@supabase/supabase-js';
-import { ClientData, BlogPost, Integration, UserRole, SiteType } from '../types';
+import { ClientData, BlogPost, Integration, UserRole, SiteType, ContractCycle } from '../types';
 
 // Tipos para o Banco de Dados (mapeamento das tabelas do Supabase)
 export type Database = {
@@ -111,6 +111,8 @@ export const fetchClients = async (): Promise<ClientData[]> => {
       *,
       posts (*),
       integrations (*),
+      products (*),
+      contracts (*),
       client_analytics (visits_data)
     `);
 
@@ -125,25 +127,50 @@ export const fetchClients = async (): Promise<ClientData[]> => {
         name: client.name,
         company: client.company,
         email: client.email,
+        phone: client.phone,
+        responsiblePerson: client.responsible_person,
+        notes: client.notes,
+        address: client.address,
+        passwordVault: client.password_vault || [],
         siteUrl: client.site_url,
         siteType: client.site_type as SiteType,
         hostingExpiry: client.hosting_expiry,
         maintenanceMode: client.maintenance_mode,
-        visits: client.client_analytics?.[0]?.visits_data || [],
-        posts: client.posts.map((p: any) => ({
+        visits: client.client_analytics?.[0]?.visits_data || [0, 0, 0, 0, 0, 0, 0],
+        posts: client.posts?.map((p: any) => ({
             id: p.id,
             title: p.title,
             status: p.status,
             date: p.date,
             content: p.content
-        })),
-        integrations: client.integrations.map((i: any) => ({
+        })) || [],
+        integrations: client.integrations?.map((i: any) => ({
             id: i.id,
             name: i.name,
             icon: i.icon,
             status: i.status,
             lastSync: i.last_sync
-        }))
+        })) || [],
+        products: client.products?.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            description: p.description,
+            price: p.price,
+            active: p.active,
+            cycle: p.cycle,
+            startDate: p.start_date,
+            endDate: p.end_date
+        })) || [],
+        contracts: client.contracts?.map((c: any) => ({
+            id: c.id,
+            title: c.title,
+            startDate: c.start_date,
+            endDate: c.end_date,
+            value: c.value,
+            status: c.status,
+            cycle: c.cycle,
+            fileUrl: c.file_url
+        })) || []
     }));
 };
 
@@ -155,6 +182,8 @@ export const fetchClientByEmail = async (email: string): Promise<ClientData | nu
       *,
       posts (*),
       integrations (*),
+      products (*),
+      contracts (*),
       client_analytics (visits_data)
     `)
         .eq('email', email)
@@ -169,36 +198,66 @@ export const fetchClientByEmail = async (email: string): Promise<ClientData | nu
         name: client.name,
         company: client.company,
         email: client.email,
+        phone: client.phone,
+        responsiblePerson: client.responsible_person,
+        notes: client.notes,
+        address: client.address,
+        passwordVault: client.password_vault || [],
         siteUrl: client.site_url,
         siteType: client.site_type as SiteType,
         hostingExpiry: client.hosting_expiry,
         maintenanceMode: client.maintenance_mode,
-        visits: client.client_analytics?.[0]?.visits_data || [],
-        posts: client.posts.map((p: any) => ({
+        visits: client.client_analytics?.[0]?.visits_data || [0, 0, 0, 0, 0, 0, 0],
+        posts: client.posts?.map((p: any) => ({
             id: p.id,
             title: p.title,
             status: p.status,
             date: p.date,
             content: p.content
-        })),
-        integrations: client.integrations.map((i: any) => ({
+        })) || [],
+        integrations: client.integrations?.map((i: any) => ({
             id: i.id,
             name: i.name,
             icon: i.icon,
             status: i.status,
             lastSync: i.last_sync
-        }))
+        })) || [],
+        products: client.products?.map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            description: p.description,
+            price: p.price,
+            active: p.active,
+            cycle: p.cycle,
+            startDate: p.start_date,
+            endDate: p.end_date
+        })) || [],
+        contracts: client.contracts?.map((c: any) => ({
+            id: c.id,
+            title: c.title,
+            startDate: c.start_date,
+            endDate: c.end_date,
+            value: c.value,
+            status: c.status,
+            cycle: c.cycle,
+            fileUrl: c.file_url
+        })) || []
     };
 };
 
-export const createClientInDb = async (client: Omit<ClientData, 'id' | 'visits' | 'posts' | 'integrations'>) => {
-    // 1. Inserir Cliente
+export const createClientInDb = async (client: Partial<ClientData>) => {
+    // 1. Inserir Cliente com todos os campos básicos e novos
     const { data, error } = await supabase
         .from('clients')
         .insert({
             name: client.name,
             company: client.company,
             email: client.email,
+            phone: client.phone,
+            responsible_person: client.responsiblePerson,
+            notes: client.notes,
+            address: client.address,
+            password_vault: client.passwordVault,
             site_url: client.siteUrl,
             site_type: client.siteType,
             hosting_expiry: client.hostingExpiry,
@@ -212,7 +271,7 @@ export const createClientInDb = async (client: Omit<ClientData, 'id' | 'visits' 
     // 2. Inicializar Analytics Vazio
     await supabase.from('client_analytics').insert({
         client_id: data.id,
-        visits_data: [0, 0, 0, 0, 0, 0, 0] // Inicializa com zeros
+        visits_data: client.visits || [0, 0, 0, 0, 0, 0, 0]
     });
 
     // 3. Inicializar Integrações Padrão
@@ -221,6 +280,21 @@ export const createClientInDb = async (client: Omit<ClientData, 'id' | 'visits' 
         { client_id: data.id, name: 'WordPress', icon: 'https://s.w.org/style/images/about/WordPress-logotype-wmark.png', status: 'disconnected' }
     ];
     await supabase.from('integrations').insert(defaultIntegrations);
+
+    // 4. Inserir Produtos Iniciais (se houver)
+    if (client.products && client.products.length > 0) {
+        const prodData = client.products.map(p => ({
+            client_id: data.id,
+            name: p.name,
+            description: p.description,
+            price: p.price,
+            active: p.active,
+            cycle: p.cycle,
+            start_date: p.startDate,
+            end_date: p.endDate
+        }));
+        await supabase.from('products').insert(prodData);
+    }
 
     return data.id;
 };
@@ -231,12 +305,17 @@ export const createClientInDb = async (client: Omit<ClientData, 'id' | 'visits' 
 export const updateClientInDb = async (clientId: string, updates: Partial<ClientData>) => {
     const dbUpdates: any = {};
 
-    if (updates.name) dbUpdates.name = updates.name;
-    if (updates.company) dbUpdates.company = updates.company;
-    if (updates.email) dbUpdates.email = updates.email;
-    if (updates.siteUrl) dbUpdates.site_url = updates.siteUrl;
-    if (updates.siteType) dbUpdates.site_type = updates.siteType;
-    if (updates.hostingExpiry) dbUpdates.hosting_expiry = updates.hostingExpiry;
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.company !== undefined) dbUpdates.company = updates.company;
+    if (updates.email !== undefined) dbUpdates.email = updates.email;
+    if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+    if (updates.responsiblePerson !== undefined) dbUpdates.responsible_person = updates.responsiblePerson;
+    if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
+    if (updates.address !== undefined) dbUpdates.address = updates.address;
+    if (updates.passwordVault !== undefined) dbUpdates.password_vault = updates.passwordVault;
+    if (updates.siteUrl !== undefined) dbUpdates.site_url = updates.siteUrl;
+    if (updates.siteType !== undefined) dbUpdates.site_type = updates.siteType;
+    if (updates.hostingExpiry !== undefined) dbUpdates.hosting_expiry = updates.hostingExpiry;
     if (updates.maintenanceMode !== undefined) dbUpdates.maintenance_mode = updates.maintenanceMode;
 
     const { data, error } = await supabase
@@ -247,6 +326,40 @@ export const updateClientInDb = async (clientId: string, updates: Partial<Client
         .single();
 
     if (error) throw error;
+
+    // Handle products/contracts sub-updates if needed
+    // In many cases, we manage these via separate flows, but let's ensure they are updated if provided
+    if (updates.products) {
+        // Simple strategy: delete and re-insert for products owned by client
+        await supabase.from('products').delete().eq('client_id', clientId);
+        const prodData = updates.products.map(p => ({
+            client_id: clientId,
+            name: p.name,
+            description: p.description,
+            price: p.price,
+            active: p.active,
+            cycle: p.cycle,
+            start_date: p.startDate,
+            end_date: p.endDate
+        }));
+        if (prodData.length > 0) await supabase.from('products').insert(prodData);
+    }
+
+    if (updates.contracts) {
+        await supabase.from('contracts').delete().eq('client_id', clientId);
+        const contData = updates.contracts.map(c => ({
+            client_id: clientId,
+            title: c.title,
+            start_date: c.startDate,
+            end_date: c.endDate,
+            value: c.value,
+            status: c.status,
+            cycle: c.cycle,
+            file_url: c.fileUrl
+        }));
+        if (contData.length > 0) await supabase.from('contracts').insert(contData);
+    }
+
     return data;
 };
 
@@ -317,31 +430,45 @@ export const seedDatabase = async () => {
             name: 'Alice Johnson',
             company: 'Bloom Boutique',
             email: 'alice@bloom.com',
+            phone: '(11) 98765-4321',
+            responsiblePerson: 'Alice J.',
             siteUrl: 'bloomboutique.com.br',
             siteType: SiteType.ECOMMERCE,
-            hostingExpiry: '15/12/2024',
+            hostingExpiry: '2024-12-15',
             maintenanceMode: false,
-            visits: [120, 145, 132, 190, 210, 180, 250],
+            notes: 'Cliente VIP desde o início.',
+            address: { street: 'Av. Paulista', number: '1000', neighborhood: 'Bela Vista', city: 'São Paulo', state: 'SP', zipCode: '01310-100' },
+            visits: [420, 545, 632, 790, 810, 980, 1250],
             posts: [
-                { title: 'Prévia da Coleção de Verão', status: 'published', date: '01/10/2023', content: 'Conteúdo de teste...' },
-                { title: 'Dicas de Moda Sustentável', status: 'draft', date: '05/10/2023', content: 'Rascunho...' }
+                { title: 'Coleção de Verão 2026', status: 'published', date: '2026-01-10', content: 'Lançamento exclusivo...' },
+                { title: 'Moda Sustentável', status: 'draft', date: '2026-01-15', content: 'Rascunho...' }
+            ],
+            products: [
+                { name: 'Manutenção E-commerce Plus', description: 'Suporte 24/7 e updates', price: 1200, active: true, cycle: ContractCycle.MONTHLY, startDate: '2026-01-01' },
+                { name: 'Hospedagem Dedicada', description: 'Servidor otimizado', price: 300, active: true, cycle: ContractCycle.MONTHLY, startDate: '2026-01-01' }
+            ],
+            contracts: [
+                { title: 'Contrato de Manutenção 2026', startDate: '2026-01-01', endDate: '2026-12-31', value: 14400, status: 'active', cycle: ContractCycle.ANNUAL }
             ],
             integrations: [
                 { name: 'Google Analytics 4', status: 'connected', lastSync: '10 min atrás' },
-                { name: 'Meta Pixel', status: 'connected', lastSync: '1 hora atrás' },
-                { name: 'Mailchimp', status: 'disconnected', lastSync: null },
-                { name: 'WordPress', status: 'disconnected', lastSync: null }
+                { name: 'Meta Pixel', status: 'connected', lastSync: '1 hora atrás' }
             ]
         },
         {
             name: 'Marcos Silva',
             company: 'TechFlow Soluções',
             email: 'marcos@techflow.io',
+            phone: '(21) 91234-5678',
+            responsiblePerson: 'Marcos S.',
             siteUrl: 'techflow.io',
             siteType: SiteType.LANDING_PAGE,
-            hostingExpiry: '20/01/2025',
+            hostingExpiry: '2025-01-20',
             maintenanceMode: false,
             visits: [40, 35, 60, 80, 75, 90, 110],
+            products: [
+                { name: 'Gestão de Tráfego', description: 'Google e Meta Ads', price: 2500, active: true, cycle: ContractCycle.MONTHLY, startDate: '2026-01-01' }
+            ],
             posts: [],
             integrations: [
                 { name: 'Google Analytics 4', status: 'pending', lastSync: null }
@@ -351,13 +478,18 @@ export const seedDatabase = async () => {
             name: 'Sara Lima',
             company: 'Arquitetura Urbana',
             email: 'sara@urbanarch.net',
+            phone: '(31) 99988-7766',
+            responsiblePerson: 'Sara L.',
             siteUrl: 'urbanarch.net',
             siteType: SiteType.INSTITUTIONAL,
-            hostingExpiry: '05/11/2024',
+            hostingExpiry: '2024-11-05',
             maintenanceMode: true,
             visits: [300, 280, 310, 290, 320, 310, 340],
+            products: [
+                { name: 'Manutenção Institucional', description: 'Atualizações mensais', price: 800, active: true, cycle: ContractCycle.MONTHLY, startDate: '2026-01-01' }
+            ],
             posts: [
-                { title: 'Brutalismo Moderno em 2024', status: 'published', date: '15/09/2023', content: 'Texto sobre arquitetura...' }
+                { title: 'Arquitetura em 2026', status: 'published', date: '2025-09-15', content: 'Tendências...' }
             ],
             integrations: [
                 { name: 'Google Analytics 4', status: 'connected', lastSync: null },
@@ -368,30 +500,30 @@ export const seedDatabase = async () => {
 
     for (const seed of seeds) {
         // Verifica se já existe
-        const existing = await fetchClientByEmail(seed.email);
+        const { data: existing } = await supabase.from('clients').select('id').eq('email', seed.email).single();
         if (existing) continue;
 
-        // Cria Cliente Base (já cria integrações padrão e analytics zerado)
-        const newClient = await createClientInDb({
+        // Cria Cliente Base com novos campos
+        const clientId = await createClientInDb({
             name: seed.name,
             company: seed.company,
             email: seed.email,
+            phone: seed.phone,
+            responsiblePerson: seed.responsiblePerson,
+            notes: seed.notes,
+            address: seed.address,
             siteUrl: seed.siteUrl,
             siteType: seed.siteType,
             hostingExpiry: seed.hostingExpiry,
-            maintenanceMode: seed.maintenanceMode
+            maintenanceMode: seed.maintenanceMode,
+            visits: seed.visits,
+            products: seed.products as any[]
         });
-
-        // Atualiza Analytics
-        await supabase
-            .from('client_analytics')
-            .update({ visits_data: seed.visits })
-            .eq('client_id', newClient.id);
 
         // Insere Posts
         if (seed.posts.length > 0) {
             const postsToInsert = seed.posts.map(p => ({
-                client_id: newClient.id,
+                client_id: clientId,
                 title: p.title,
                 status: p.status,
                 date: p.date,
@@ -400,22 +532,29 @@ export const seedDatabase = async () => {
             await supabase.from('posts').insert(postsToInsert);
         }
 
-        // Atualiza/Insere Integrações Extras
-        // Observação: createClientInDb cria GA4 e WordPress por padrão.
-        // Vamos limpar e recriar as integrações para bater com o seed exato, ou atualizar.
-        // Simplificação: vamos apagar as padrões e inserir as do seed.
-        await supabase.from('integrations').delete().eq('client_id', newClient.id);
+        // Insere Contratos
+        if (seed.contracts && seed.contracts.length > 0) {
+            const contractsToInsert = seed.contracts.map(c => ({
+                client_id: clientId,
+                title: c.title,
+                start_date: c.startDate,
+                end_date: c.endDate,
+                value: c.value,
+                status: c.status,
+                cycle: c.cycle
+            }));
+            await supabase.from('contracts').insert(contractsToInsert);
+        }
 
+        // Atualiza Integrações
+        await supabase.from('integrations').delete().eq('client_id', clientId);
         const integrationsToInsert = seed.integrations.map(i => ({
-            client_id: newClient.id,
+            client_id: clientId,
             name: i.name,
-            // icon: ... vamos simplificar, o frontend já tem ícones mockados se vier vazio? 
-            // O createClientInDb tinha URLs de icon. Vamos pegar de lá ou hardcoded aqui para o seed ficar bonito.
             icon: HelperGetIconUrl(i.name),
             status: i.status,
             last_sync: i.lastSync
         }));
-
         await supabase.from('integrations').insert(integrationsToInsert);
     }
 };

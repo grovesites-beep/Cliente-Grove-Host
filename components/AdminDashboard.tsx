@@ -266,21 +266,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
     toast.success("Novo cliente cadastrado com sucesso!");
   };
 
-  // Mock data for Admin Charts
-  const revenueData = [
-    { month: 'Jan', revenue: 12000 },
-    { month: 'Fev', revenue: 13500 },
-    { month: 'Mar', revenue: 15000 },
-    { month: 'Abr', revenue: 16200 },
-    { month: 'Mai', revenue: 18000 },
-    { month: 'Jun', revenue: 21000 },
-    { month: 'Jul', revenue: 23500 },
-    { month: 'Ago', revenue: 25000 },
-    { month: 'Set', revenue: 28000 },
-    { month: 'Out', revenue: 31000 },
-    { month: 'Nov', revenue: 33500 },
-    { month: 'Dez', revenue: 36000 },
-  ];
+  // Calculate dynamic data for charts
+  const revenueData = React.useMemo(() => {
+    const currentMonth = new Date().getMonth();
+    const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+    // Calculate REAL monthly MRR
+    const baseMRR = clients.reduce((sum, client) => {
+      const productSum = (client.products || []).reduce((s, p) => p.active ? s + p.price : s, 0);
+      const contractSum = (client.contracts || []).reduce((s, c) => c.status === 'active' ? s + (c.value / 12) : s, 0);
+      return sum + productSum + contractSum;
+    }, 0);
+
+    // Simple projection with 2% growth for visualization
+    return Array.from({ length: 12 }).map((_, i) => {
+      const monthIndex = (currentMonth + i) % 12;
+      return {
+        month: months[monthIndex],
+        revenue: Math.round(baseMRR * (1 + i * 0.02)) || 15000 + (i * 1000) // Fallback for empty state
+      };
+    });
+  }, [clients]);
 
   // --- Components ---
 
