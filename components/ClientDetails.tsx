@@ -14,7 +14,7 @@ interface ClientDetailsProps {
 }
 
 export const ClientDetails: React.FC<ClientDetailsProps> = ({ client, onClose, onUpdate }) => {
-    const [activeTab, setActiveTab] = useState<'info' | 'products' | 'contracts' | 'vault' | 'notes'>('info');
+    const [activeTab, setActiveTab] = useState<'info' | 'products' | 'contracts' | 'vault' | 'integrations' | 'notes'>('info');
     const [isEditing, setIsEditing] = useState(false);
     const [showPassword, setShowPassword] = useState<{ [key: string]: boolean }>({});
     const [copiedId, setCopiedId] = useState<string | null>(null);
