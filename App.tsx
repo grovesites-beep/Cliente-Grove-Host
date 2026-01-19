@@ -4,7 +4,7 @@ import { ClientPortal } from './components/ClientPortal';
 import { AuthPages } from './components/AuthPages';
 import { ClientData, UserRole, SiteType } from './types';
 import { ArrowLeft } from 'lucide-react';
-import { fetchClients, createClientInDb, fetchClientByEmail } from './services/supabaseClient';
+import { fetchClients, createClientInDb, fetchClientByEmail, seedDatabase } from './services/supabaseClient';
 
 type AuthState = 'unauthenticated' | 'authenticated';
 
@@ -81,6 +81,17 @@ const App: React.FC = () => {
     } catch (error) {
       console.error("Erro ao criar cliente:", error);
       alert('Erro ao salvar no banco de dados.');
+    }
+  };
+
+  const handleSeedDatabase = async () => {
+    if (confirm('Deseja popular o banco de dados com dados de teste?')) {
+      setIsLoadingData(true);
+      await seedDatabase();
+      const updated = await fetchClients();
+      setClients(updated);
+      setIsLoadingData(false);
+      alert('Banco de dados povoado!');
     }
   };
 

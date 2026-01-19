@@ -218,3 +218,123 @@ export const updateIntegrationStatus = async (integrationId: string, status: str
         .update({ status, last_sync: lastSync })
         .eq('id', integrationId);
 };
+
+// --- Função de Seed (Povoar Banco) ---
+export const seedDatabase = async () => {
+    // Dados Iniciais de Teste
+    const seeds = [
+        {
+            name: 'Alice Johnson',
+            company: 'Bloom Boutique',
+            email: 'alice@bloom.com',
+            siteUrl: 'bloomboutique.com.br',
+            siteType: SiteType.ECOMMERCE,
+            hostingExpiry: '15/12/2024',
+            maintenanceMode: false,
+            visits: [120, 145, 132, 190, 210, 180, 250],
+            posts: [
+                { title: 'Prévia da Coleção de Verão', status: 'published', date: '01/10/2023', content: 'Conteúdo de teste...' },
+                { title: 'Dicas de Moda Sustentável', status: 'draft', date: '05/10/2023', content: 'Rascunho...' }
+            ],
+            integrations: [
+                { name: 'Google Analytics 4', status: 'connected', lastSync: '10 min atrás' },
+                { name: 'Meta Pixel', status: 'connected', lastSync: '1 hora atrás' },
+                { name: 'Mailchimp', status: 'disconnected', lastSync: null },
+                { name: 'WordPress', status: 'disconnected', lastSync: null }
+            ]
+        },
+        {
+            name: 'Marcos Silva',
+            company: 'TechFlow Soluções',
+            email: 'marcos@techflow.io',
+            siteUrl: 'techflow.io',
+            siteType: SiteType.LANDING_PAGE,
+            hostingExpiry: '20/01/2025',
+            maintenanceMode: false,
+            visits: [40, 35, 60, 80, 75, 90, 110],
+            posts: [],
+            integrations: [
+                { name: 'Google Analytics 4', status: 'pending', lastSync: null }
+            ]
+        },
+        {
+            name: 'Sara Lima',
+            company: 'Arquitetura Urbana',
+            email: 'sara@urbanarch.net',
+            siteUrl: 'urbanarch.net',
+            siteType: SiteType.INSTITUTIONAL,
+            hostingExpiry: '05/11/2024',
+            maintenanceMode: true,
+            visits: [300, 280, 310, 290, 320, 310, 340],
+            posts: [
+                { title: 'Brutalismo Moderno em 2024', status: 'published', date: '15/09/2023', content: 'Texto sobre arquitetura...' }
+            ],
+            integrations: [
+                { name: 'Google Analytics 4', status: 'connected', lastSync: null },
+                { name: 'HubSpot CRM', status: 'connected', lastSync: '1 dia atrás' }
+            ]
+        }
+    ];
+
+    for (const seed of seeds) {
+        // Verifica se já existe
+        const existing = await fetchClientByEmail(seed.email);
+        if (existing) continue;
+
+        // Cria Cliente Base (já cria integrações padrão e analytics zerado)
+        const newClient = await createClientInDb({
+            name: seed.name,
+            company: seed.company,
+            email: seed.email,
+            siteUrl: seed.siteUrl,
+            siteType: seed.siteType,
+            hostingExpiry: seed.hostingExpiry,
+            maintenanceMode: seed.maintenanceMode
+        });
+
+        // Atualiza Analytics
+        await supabase
+            .from('client_analytics')
+            .update({ visits_data: seed.visits })
+            .eq('client_id', newClient.id);
+
+        // Insere Posts
+        if (seed.posts.length > 0) {
+            const postsToInsert = seed.posts.map(p => ({
+                client_id: newClient.id,
+                title: p.title,
+                status: p.status,
+                date: p.date,
+                content: p.content
+            }));
+            await supabase.from('posts').insert(postsToInsert);
+        }
+
+        // Atualiza/Insere Integrações Extras
+        // Observação: createClientInDb cria GA4 e WordPress por padrão.
+        // Vamos limpar e recriar as integrações para bater com o seed exato, ou atualizar.
+        // Simplificação: vamos apagar as padrões e inserir as do seed.
+        await supabase.from('integrations').delete().eq('client_id', newClient.id);
+
+        const integrationsToInsert = seed.integrations.map(i => ({
+            client_id: newClient.id,
+            name: i.name,
+            // icon: ... vamos simplificar, o frontend já tem ícones mockados se vier vazio? 
+            // O createClientInDb tinha URLs de icon. Vamos pegar de lá ou hardcoded aqui para o seed ficar bonito.
+            icon: HelperGetIconUrl(i.name),
+            status: i.status,
+            last_sync: i.lastSync
+        }));
+
+        await supabase.from('integrations').insert(integrationsToInsert);
+    }
+};
+
+const HelperGetIconUrl = (name: string) => {
+    if (name.includes('Google')) return 'https://cdn.worldvectorlogo.com/logos/google-analytics-4.svg';
+    if (name.includes('Meta') || name.includes('Facebook')) return 'https://upload.wikimedia.org/wikipedia/commons/6/6c/Facebook_Logo_2023.png';
+    if (name.includes('Mailchimp')) return 'https://cdn.worldvectorlogo.com/logos/mailchimp-freddie-icon-5.svg';
+    if (name.includes('WordPress')) return 'https://s.w.org/style/images/about/WordPress-logotype-wmark.png';
+    if (name.includes('HubSpot')) return 'https://cdn.worldvectorlogo.com/logos/hubspot-1.svg';
+    return '';
+};

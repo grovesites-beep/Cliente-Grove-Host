@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ClientData, SiteType } from '../types';
 import {
   Users, LayoutDashboard, Settings, LogOut, Search, Bell,
-  Menu, ChevronRight, DollarSign, Briefcase, Plus, MoreVertical, ExternalLink, X, Save, FileText, ArrowUpRight
+  Menu, ChevronRight, DollarSign, Briefcase, Plus, MoreVertical, ExternalLink, X, Save, FileText, ArrowUpRight, Database
 } from 'lucide-react';
 
 import {
@@ -15,9 +15,11 @@ interface AdminDashboardProps {
   onSwitchToClientView: (client: ClientData) => void;
   onAddClient: (client: Omit<ClientData, 'id'>) => void;
   onLogout: () => void;
+  onSeedDatabase: () => void;
 }
 
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelectClient, onSwitchToClientView, onAddClient, onLogout }) => {
+
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelectClient, onSwitchToClientView, onAddClient, onLogout, onSeedDatabase }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'clients' | 'finance' | 'settings'>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -252,6 +254,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+          <button
+            onClick={onSeedDatabase}
+            className="px-4 py-2 border border-blue-200 bg-blue-50 text-blue-600 rounded-lg text-sm font-bold hover:bg-blue-100 flex items-center gap-2"
+          >
+            <Database size={16} /> Seed DB
+          </button>
           <button className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 flex items-center gap-2">
             <ArrowUpRight size={16} /> Importar
           </button>
