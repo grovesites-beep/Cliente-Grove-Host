@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ClientData, SiteType } from '../types';
 import {
   Users, LayoutDashboard, Settings, LogOut, Search, Bell,
-  Menu, ChevronRight, DollarSign, Briefcase, Plus, MoreVertical, ExternalLink, X, Save, FileText, ArrowUpRight, Database, Star
+  Menu, ChevronRight, DollarSign, Briefcase, Plus, MoreVertical, ExternalLink, X, Save, FileText, ArrowUpRight, Database, Star, Mail, Phone
 } from 'lucide-react';
 
 import {
@@ -309,142 +309,232 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
     );
   };
 
-  const renderClients = () => (
-    <div className="space-y-6 animate-fadeIn font-sans text-slate-600">
+  const renderClients = () => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filterType, setFilterType] = useState('all'); // all, company, contact
 
-      {/* Top Toolbar */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl border border-slate-200">
-        <div className="flex gap-2 w-full md:w-auto overflow-x-auto">
-          <button className="text-red-500 font-bold bg-red-50 px-4 py-2 rounded-lg text-sm whitespace-nowrap border border-red-100 flex items-center gap-2">
-            <Users size={16} /> Todos
-          </button>
-          <button className="text-slate-500 font-medium px-4 py-2 rounded-lg text-sm whitespace-nowrap hover:bg-slate-50 flex items-center gap-2">
-            <Briefcase size={16} /> Empresa
-          </button>
-          <button className="text-slate-500 font-medium px-4 py-2 rounded-lg text-sm whitespace-nowrap hover:bg-slate-50 flex items-center gap-2">
-            <Users size={16} /> Contato
-          </button>
-        </div>
+    const filteredClients = clients.filter(client => {
+      const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        client.company.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesSearch;
+    });
 
-        <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="relative flex-1 md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-            <input
-              type="text"
-              placeholder="Buscar"
-              className="w-full pl-9 pr-4 py-2 bg-slate-50 rounded-lg border border-slate-200 text-sm outline-none focus:ring-1 focus:ring-slate-300"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+    const getInitials = (name: string) => {
+      return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    };
+
+    const getAvatarColor = (name: string) => {
+      const colors = [
+        'bg-indigo-500', 'bg-purple-500', 'bg-pink-500', 'bg-rose-500',
+        'bg-orange-500', 'bg-amber-500', 'bg-emerald-500', 'bg-teal-500',
+        'bg-cyan-500', 'bg-blue-500'
+      ];
+      const index = name.charCodeAt(0) % colors.length;
+      return colors[index];
+    };
+
+    const getStatusBadge = (client: ClientData) => {
+      // Logic based on maintenance mode or other criteria
+      if (client.maintenanceMode) {
+        return <span className="px-3 py-1 bg-amber-50 text-amber-600 text-xs font-bold rounded-full border border-amber-200">• Manutenção</span>;
+      }
+      if (client.posts.length > 0) {
+        return <span className="px-3 py-1 bg-green-50 text-green-600 text-xs font-bold rounded-full border border-green-200">• Ativo</span>;
+      }
+      return <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full border border-blue-200">• Novo</span>;
+    };
+
+    return (
+      <div className="space-y-6 animate-fadeIn">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h2 className="text-3xl font-bold text-slate-800 tracking-tight">{filteredClients.length} Clientes</h2>
+            <p className="text-slate-500 mt-1">Gerencie todos os seus clientes em um só lugar</p>
           </div>
-          <button
-            onClick={onSeedDatabase}
-            className="px-4 py-2 border border-blue-200 bg-blue-50 text-blue-600 rounded-lg text-sm font-bold hover:bg-blue-100 flex items-center gap-2"
-          >
-            <Database size={16} /> Seed DB
-          </button>
-          <button className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 flex items-center gap-2">
-            <ArrowUpRight size={16} /> Importar
-          </button>
-          <button className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 flex items-center gap-2">
-            Filtrar
-          </button>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="bg-red-500 text-white w-10 h-10 rounded-lg flex items-center justify-center hover:bg-red-600 shadow-md shadow-red-200"
+            className="flex items-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all hover:scale-105"
           >
-            <Plus size={20} />
+            <Plus size={20} /> Novo Cliente
           </button>
         </div>
-      </div>
 
-      {/* Main Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        {/* Filters and Search */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            {/* Search */}
+            <div className="relative flex-1 w-full md:max-w-md">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+              <input
+                type="text"
+                placeholder="Buscar cliente, email ou empresa..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              />
+            </div>
 
-        {/* Accordion Header */}
-        <div className="px-6 py-4 flex items-center gap-2 border-b border-slate-100 cursor-pointer hover:bg-slate-50">
-          <div className="w-4 h-4 rounded border border-slate-300 flex items-center justify-center">
-            <div className="transform rotate-45 mb-[2px] ml-[1px] hidden">L</div>
+            {/* Filter Buttons */}
+            <div className="flex items-center gap-2">
+              <button className="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
+                <MoreVertical size={18} />
+              </button>
+              <button
+                onClick={() => onSeedDatabase()}
+                className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors"
+              >
+                <Database size={18} /> Seed DB
+              </button>
+            </div>
           </div>
-          <span className="text-green-600 font-bold text-sm tracking-wide flex items-center gap-2">
-            <ChevronRight size={16} className="text-green-600" />
-            Contatos ativos ({filteredClients.length})
-          </span>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-white text-[10px] text-slate-400 uppercase tracking-wider font-bold border-b border-slate-100">
-              <tr>
-                <th className="px-4 py-4 w-10 text-center"><input type="checkbox" className="rounded border-slate-300" /></th>
-                <th className="px-4 py-4">Contato</th>
-                <th className="px-4 py-4">E-mail</th>
-                <th className="px-4 py-4">Conta</th>
-                <th className="px-4 py-4">Negociação</th>
-                <th className="px-4 py-4">Valor Estimado</th>
-                <th className="px-4 py-4">Telefone</th>
-                <th className="px-4 py-4">Cargo</th>
-                <th className="px-4 py-4">Tipo</th>
-                <th className="px-4 py-4 w-10"></th>
-              </tr>
-            </thead>
-            <tbody className="text-sm font-medium">
-              {filteredClients.map((client, index) => (
-                <tr key={client.id} className="hover:bg-slate-50 border-b border-slate-50 last:border-none group">
-                  <td className="px-4 py-5 text-center">
-                    <input type="checkbox" className="rounded border-slate-300 text-green-500 focus:ring-green-200" />
-                  </td>
-                  <td className="px-4 py-5 font-bold text-slate-800">{client.name}</td>
-                  <td className="px-4 py-5 text-blue-500 hover:underline cursor-pointer">{client.email}</td>
-                  <td className="px-4 py-5">
-                    <span className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-xs font-bold text-slate-600 flex items-center w-fit gap-1">
-                      <span className="w-2 h-2 rounded-full bg-slate-400"></span>
-                      {client.company}
-                    </span>
-                  </td>
-                  <td className="px-4 py-5">
-                    <div className="flex flex-col">
-                      <span className="text-green-700 text-xs font-bold flex items-center gap-1">
-                        <div className="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center text-[10px]">▼</div>
-                        {client.maintenanceMode ? 'Em Manutenção' : 'Proposta Comercial'}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-5 text-slate-500">R$ {(1200 + index * 350).toLocaleString('pt-BR')}</td>
-                  <td className="px-4 py-5">
-                    <div className="flex items-center gap-1">
-                      <img src="https://flagcdn.com/w20/br.png" width="16" alt="Brazil" />
-                      <span className="text-xs text-slate-600">+55 48 999{index}1-2345</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-5 text-cyan-500 font-bold text-xs uppercase">CEO</td>
-                  <td className="px-4 py-5">
-                    <button
-                      onClick={() => onSwitchToClientView(client)}
-                      className="px-6 py-1 bg-blue-500 text-white text-xs font-bold rounded shadow-sm shadow-blue-200 hover:bg-blue-600 transition-colors"
-                    >
-                      Cliente
-                    </button>
-                  </td>
-                  <td className="px-4 py-5 text-center text-slate-300 hover:text-slate-600 cursor-pointer">
-                    <MoreVertical size={16} />
-                  </td>
+        {/* Table */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50">
+                  <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    <input type="checkbox" className="rounded border-slate-300" />
+                  </th>
+                  <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Cliente
+                  </th>
+                  <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Contato
+                  </th>
+                  <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Empresa
+                  </th>
+                  <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Site
+                  </th>
+                  <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                    Ações
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <div className="px-6 py-4 border-t border-slate-100 text-sm text-red-400 font-medium flex items-center gap-2 cursor-pointer hover:bg-slate-50">
-            <ChevronRight size={16} /> Contatos inativos (0)
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredClients.map((client) => (
+                  <tr
+                    key={client.id}
+                    className="hover:bg-slate-50 transition-colors group cursor-pointer"
+                    onClick={() => onSwitchToClientView(client)}
+                  >
+                    <td className="px-6 py-4">
+                      <input
+                        type="checkbox"
+                        className="rounded border-slate-300"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full ${getAvatarColor(client.name)} flex items-center justify-center text-white font-bold text-sm shadow-sm`}>
+                          {getInitials(client.name)}
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-800">{client.name}</p>
+                          <p className="text-xs text-slate-500">Cliente desde {new Date().toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                          <Mail size={14} className="text-slate-400" />
+                          {client.email}
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                          <Phone size={14} className="text-slate-400" />
+                          (11) 9999-9999
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <Briefcase size={16} className="text-slate-400" />
+                        <span className="font-medium text-slate-700">{client.company}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      {getStatusBadge(client)}
+                    </td>
+                    <td className="px-6 py-4">
+                      <a
+                        href={`https://${client.siteUrl}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium text-sm"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {client.siteUrl}
+                        <ExternalLink size={14} />
+                      </a>
+                    </td>
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSwitchToClientView(client);
+                        }}
+                        className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-bold hover:bg-indigo-100 transition-colors opacity-0 group-hover:opacity-100"
+                      >
+                        Acessar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
-      </div>
 
-      <div className="px-4 py-2 text-xs text-slate-400 flex items-center gap-2 cursor-pointer hover:text-slate-600">
-        <Plus size={14} /> Adicionar contato
+          {/* Empty State */}
+          {filteredClients.length === 0 && (
+            <div className="text-center py-16">
+              <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Users size={32} className="text-slate-400" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 mb-2">Nenhum cliente encontrado</h3>
+              <p className="text-slate-500 mb-6">Comece adicionando seu primeiro cliente ou ajuste os filtros</p>
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors"
+              >
+                Adicionar Cliente
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Pagination */}
+        {filteredClients.length > 0 && (
+          <div className="flex items-center justify-between px-6 py-4 bg-white rounded-2xl border border-slate-200">
+            <p className="text-sm text-slate-600">
+              Mostrando <span className="font-bold">{filteredClients.length}</span> de <span className="font-bold">{clients.length}</span> resultados
+            </p>
+            <div className="flex items-center gap-2">
+              <button className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">
+                Anterior
+              </button>
+              <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold">
+                1
+              </button>
+              <button className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">
+                Próximo
+              </button>
+            </div>
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="flex h-screen bg-[#F3F4F6] overflow-hidden font-sans selection:bg-indigo-100 selection:text-indigo-700">

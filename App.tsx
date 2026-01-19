@@ -188,6 +188,20 @@ const App: React.FC = () => {
 
   // --- Render Logic ---
 
+  // Loading Screen (evita flash da tela de login)
+  if (isLoadingData) {
+    return (
+      <div className="min-h-screen bg-[#F3F4F6] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-xl shadow-indigo-200 mb-4 mx-auto animate-pulse">
+            N
+          </div>
+          <p className="text-slate-600 font-medium">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (authState === 'unauthenticated') {
     return (
       <AuthPages
