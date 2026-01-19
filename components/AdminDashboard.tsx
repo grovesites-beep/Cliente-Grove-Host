@@ -10,6 +10,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell, Legend
 } from 'recharts';
+import { ClientDetails } from './ClientDetails';
 
 interface AdminDashboardProps {
   clients: ClientData[];
@@ -23,7 +24,7 @@ interface AdminDashboardProps {
 }
 
 
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelectClient, onSwitchToClientView, onAddClient, onLogout, onSeedDatabase }) => {
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelectClient, onSwitchToClientView, onAddClient, onUpdateClient, onDeleteClient, onLogout, onSeedDatabase }) => {
   // Load saved tab from localStorage
   const [activeTab, setActiveTab] = useState<'overview' | 'clients' | 'finance' | 'settings'>(() => {
     const saved = localStorage.getItem('adminActiveTab');
@@ -46,6 +47,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
     hostingExpiry: '',
     maintenanceMode: false
   });
+
+  // Client Details Modal State
+  const [selectedClientForDetails, setSelectedClientForDetails] = useState<ClientData | null>(null);
+  const [isClientDetailsOpen, setIsClientDetailsOpen] = useState(false);
 
   // Save active tab to localStorage whenever it changes
   useEffect(() => {
@@ -456,7 +461,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
                   <tr
                     key={client.id}
                     className="hover:bg-slate-50 transition-colors group cursor-pointer"
-                    onClick={() => onSwitchToClientView(client)}
+                    onClick={() => {
+                      setSelectedClientForDetails(client);
+                      setIsClientDetailsOpen(true);
+                    }}
                   >
                     {/* Cliente */}
                     <td className="px-6 py-4">
@@ -783,6 +791,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
       </div>
 
       {isModalOpen && renderNewClientModal()}
+
+      {/* Client Details Modal */}
+      {isClientDetailsOpen && selectedClientForDetails && (
+        <ClientDetails
+          client={selectedClientForDetails}
+          onClose={() => {
+            setIsClientDetailsOpen(false);
+            setSelectedClientForDetails(null);
+          }}
+          onUpdate={(updatedClient) => {
+            onUpdateClient(updatedClient.id, updatedClient);
+            setIsClientDetailsOpen(false);
+            setSelectedClientForDetails(null);
+          }}
+        />
+      )}
     </div>
   );
 };
