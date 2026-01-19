@@ -1,15 +1,12 @@
 import React, { useState } from 'react';
 import { User, ShieldCheck, ArrowRight, Lock, Mail, Layout, ArrowLeft, Star, Phone, Zap, Clock } from 'lucide-react';
 
-import { signIn } from '../services/supabaseClient';
+import { signIn, getUserRole } from '../services/supabaseClient';
 
 interface AuthPagesProps {
   onLoginAdmin: () => void;
   onLoginClient: (email: string) => void;
 }
-
-// TODO: Em produção, mover esta lista para variáveis de ambiente (VITE_ADMIN_EMAILS) ou tabela 'users' no banco com coluna 'role'.
-const ADMIN_EMAILS = ['admin@nexushub.com', 'nei@grovehub.com.br'];
 
 export const AuthPages: React.FC<AuthPagesProps> = ({ onLoginAdmin, onLoginClient }) => {
   const [email, setEmail] = useState('');
@@ -26,22 +23,23 @@ export const AuthPages: React.FC<AuthPagesProps> = ({ onLoginAdmin, onLoginClien
       // 1. Tentar Login no Supabase Auth
       const { data, error } = await signIn(email, password);
 
-      if (error) {
+      if (error || !data.user) {
         setError('Email ou senha incorretos.');
         setIsLoading(false);
         return;
       }
 
-      const userEmail = data.user?.email || '';
+      // 2. Verificar Role no Banco de Dados (Segurança Real)
+      const role = await getUserRole(data.user.id);
 
-      // 2. Verificar Permissão (Simples baseada em Email por enquanto, ou verificar na tabela 'clients')
-      if (ADMIN_EMAILS.includes(userEmail) || email === 'admin@nexushub.com') { // admin@nexushub.com hardcoded como fallback provisório
+      if (role === 'admin') {
         onLoginAdmin();
       } else {
-        onLoginClient(userEmail);
+        onLoginClient(data.user.email || '');
       }
 
     } catch (err) {
+      console.error(err);
       setError('Erro ao conectar com o servidor.');
       setIsLoading(false);
     }

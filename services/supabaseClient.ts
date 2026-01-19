@@ -91,6 +91,18 @@ export const signOut = async () => {
     return { error };
 };
 
+// Busca o Role do usuário na tabela profiles
+export const getUserRole = async (userId: string): Promise<'admin' | 'client' | null> => {
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+
+    if (error || !data) return null;
+    return data.role as 'admin' | 'client';
+};
+
 // Busca todos os clientes (Admin)
 export const fetchClients = async (): Promise<ClientData[]> => {
     const { data: clientsData, error } = await supabase
