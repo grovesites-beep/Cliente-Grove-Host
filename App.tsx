@@ -1,80 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AdminDashboard } from './components/AdminDashboard';
 import { ClientPortal } from './components/ClientPortal';
 import { AuthPages } from './components/AuthPages';
 import { ClientData, UserRole, SiteType } from './types';
 import { ArrowLeft } from 'lucide-react';
-
-// Mock Data Initialization
-const MOCK_CLIENTS: ClientData[] = [
-  {
-    id: '1',
-    name: 'Alice Johnson',
-    company: 'Bloom Boutique',
-    email: 'alice@bloom.com',
-    siteUrl: 'bloomboutique.com.br',
-    siteType: SiteType.ECOMMERCE,
-    hostingExpiry: '15/12/2024',
-    maintenanceMode: false,
-    visits: [120, 145, 132, 190, 210, 180, 250],
-    posts: [
-      { id: '101', title: 'Prévia da Coleção de Verão', status: 'published', date: '01/10/2023' },
-      { id: '102', title: 'Dicas de Moda Sustentável', status: 'draft', date: '05/10/2023' }
-    ],
-    integrations: [
-      { id: 'i1', name: 'Google Analytics 4', icon: 'https://cdn.worldvectorlogo.com/logos/google-analytics-4.svg', status: 'connected', lastSync: '10 min atrás' },
-      { id: 'i2', name: 'Meta Pixel', icon: 'https://upload.wikimedia.org/wikipedia/commons/6/6c/Facebook_Logo_2023.png', status: 'connected', lastSync: '1 hora atrás' },
-      { id: 'i3', name: 'Mailchimp', icon: 'https://cdn.worldvectorlogo.com/logos/mailchimp-freddie-icon-5.svg', status: 'disconnected' }
-    ]
-  },
-  {
-    id: '2',
-    name: 'Marcos Silva',
-    company: 'TechFlow Soluções',
-    email: 'marcos@techflow.io',
-    siteUrl: 'techflow.io',
-    siteType: SiteType.LANDING_PAGE,
-    hostingExpiry: '20/01/2025',
-    maintenanceMode: false,
-    visits: [40, 35, 60, 80, 75, 90, 110],
-    posts: [],
-    integrations: [
-       { id: 'i1', name: 'Google Analytics 4', icon: 'https://cdn.worldvectorlogo.com/logos/google-analytics-4.svg', status: 'pending' }
-    ]
-  },
-  {
-    id: '3',
-    name: 'Sara Lima',
-    company: 'Arquitetura Urbana',
-    email: 'sara@urbanarch.net',
-    siteUrl: 'urbanarch.net',
-    siteType: SiteType.INSTITUTIONAL,
-    hostingExpiry: '05/11/2024',
-    maintenanceMode: true,
-    visits: [300, 280, 310, 290, 320, 310, 340],
-    posts: [
-        { id: '301', title: 'Brutalismo Moderno em 2024', status: 'published', date: '15/09/2023' }
-    ],
-    integrations: [
-        { id: 'i1', name: 'Google Analytics 4', icon: 'https://cdn.worldvectorlogo.com/logos/google-analytics-4.svg', status: 'connected' },
-        { id: 'i2', name: 'HubSpot CRM', icon: 'https://cdn.worldvectorlogo.com/logos/hubspot-1.svg', status: 'connected', lastSync: '1 dia atrás' }
-    ]
-  }
-];
+import { fetchClients, createClientInDb, fetchClientByEmail } from './services/supabaseClient';
 
 type AuthState = 'unauthenticated' | 'authenticated';
 
 const App: React.FC = () => {
   const [authState, setAuthState] = useState<AuthState>('unauthenticated');
   const [currentUserRole, setCurrentUserRole] = useState<UserRole | null>(null);
-  const [clients, setClients] = useState<ClientData[]>(MOCK_CLIENTS);
-  
+  const [clients, setClients] = useState<ClientData[]>([]);
+  const [isLoadingData, setIsLoadingData] = useState(false);
+
   // O cliente selecionado pode ser o próprio usuário logado (se for CLIENTE)
   // ou um cliente que o Admin está visualizando (Impersonation)
   const [selectedClient, setSelectedClient] = useState<ClientData | null>(null);
-  
+
   // Flag para saber se é um admin visualizando como cliente
   const [isImpersonating, setIsImpersonating] = useState(false);
+
+  // Carregar dados iniciais do Supabase
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoadingData(true);
+      const data = await fetchClients();
+      if (data) {
+        setClients(data);
+      }
+      setIsLoadingData(false);
+    };
+    loadData();
+  }, []); // Executa apenas na montagem
 
   // --- Handlers de Autenticação ---
 
@@ -82,17 +40,24 @@ const App: React.FC = () => {
     setAuthState('authenticated');
     setCurrentUserRole(UserRole.ADMIN);
     setIsImpersonating(false);
+    // Recarrega clientes ao logar como admin para garantir dados frescos
+    fetchClients().then(setClients);
   };
 
-  const handleClientLogin = (email: string) => {
-    // Procura o cliente pelo email (Simulação simples)
-    // Se o campo estiver vazio na demo, pega o primeiro
-    const client = clients.find(c => c.email.toLowerCase() === email.toLowerCase()) || clients[0];
-    
-    setAuthState('authenticated');
-    setCurrentUserRole(UserRole.CLIENT);
-    setSelectedClient(client);
-    setIsImpersonating(false);
+  const handleClientLogin = async (email: string) => {
+    setIsLoadingData(true);
+    // Busca o cliente real no banco de dados
+    const client = await fetchClientByEmail(email);
+
+    if (client) {
+      setAuthState('authenticated');
+      setCurrentUserRole(UserRole.CLIENT);
+      setSelectedClient(client);
+      setIsImpersonating(false);
+    } else {
+      alert('Cliente não encontrado. Verifique o e-mail ou contate o suporte.');
+    }
+    setIsLoadingData(false);
   };
 
   const handleLogout = () => {
@@ -104,7 +69,24 @@ const App: React.FC = () => {
 
   // --- Handlers de Dados ---
 
+  const createNewClient = async (newClientData: Omit<ClientData, 'id'>) => {
+    try {
+      // Salva no Supabase
+      await createClientInDb(newClientData);
+
+      // Atualiza a lista local
+      const updatedList = await fetchClients();
+      setClients(updatedList);
+      alert('Cliente cadastrado com sucesso!');
+    } catch (error) {
+      console.error("Erro ao criar cliente:", error);
+      alert('Erro ao salvar no banco de dados.');
+    }
+  };
+
   const handleUpdateClient = (updatedClient: ClientData) => {
+    // A atualização real no DB deve ser feita nos componentes filhos (ClientPortal) 
+    // ou implementada aqui. Por enquanto, atualizamos o estado local para refletir na UI.
     setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
     setSelectedClient(updatedClient);
   };
@@ -124,7 +106,7 @@ const App: React.FC = () => {
 
   if (authState === 'unauthenticated') {
     return (
-      <AuthPages 
+      <AuthPages
         onLoginAdmin={handleAdminLogin}
         onLoginClient={handleClientLogin}
       />
@@ -135,18 +117,18 @@ const App: React.FC = () => {
   if (currentUserRole === UserRole.CLIENT && selectedClient) {
     return (
       <div className="relative">
-         <div className="fixed bottom-4 left-4 z-[100]">
-            <button 
-              onClick={handleLogout}
-              className="bg-white/90 backdrop-blur border border-slate-200 text-slate-500 px-4 py-2 rounded-full text-xs font-bold hover:bg-slate-100 hover:text-red-500 transition-colors shadow-lg"
-            >
-              Sair
-            </button>
-         </div>
-         <ClientPortal 
-            client={selectedClient} 
-            onUpdateClient={handleUpdateClient}
-          />
+        <div className="fixed bottom-4 left-4 z-[100]">
+          <button
+            onClick={handleLogout}
+            className="bg-white/90 backdrop-blur border border-slate-200 text-slate-500 px-4 py-2 rounded-full text-xs font-bold hover:bg-slate-100 hover:text-red-500 transition-colors shadow-lg"
+          >
+            Sair
+          </button>
+        </div>
+        <ClientPortal
+          client={selectedClient}
+          onUpdateClient={handleUpdateClient}
+        />
       </div>
     );
   }
@@ -159,13 +141,13 @@ const App: React.FC = () => {
         <div className="relative font-sans text-slate-900 bg-slate-50 min-h-screen">
           <div className="fixed bottom-4 right-4 z-[100] flex flex-col items-end gap-2 animate-fadeIn">
             <div className="bg-slate-900 text-white px-4 py-3 rounded-full shadow-2xl flex items-center gap-3 border border-slate-700">
-               <div className="flex items-center gap-2">
-                 <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                 <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Modo Cliente</span>
-               </div>
-               <div className="h-4 w-px bg-slate-700"></div>
-               <span className="font-medium text-sm">{selectedClient?.company}</span>
-               <button 
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                <span className="text-xs font-bold uppercase tracking-wide text-slate-400">Modo Cliente</span>
+              </div>
+              <div className="h-4 w-px bg-slate-700"></div>
+              <span className="font-medium text-sm">{selectedClient?.company}</span>
+              <button
                 onClick={backToAdminDashboard}
                 className="ml-2 bg-white text-slate-900 px-3 py-1 rounded-full text-xs font-bold hover:bg-slate-200 transition-colors flex items-center gap-1"
               >
@@ -173,8 +155,8 @@ const App: React.FC = () => {
               </button>
             </div>
           </div>
-          <ClientPortal 
-            client={selectedClient} 
+          <ClientPortal
+            client={selectedClient}
             onUpdateClient={handleUpdateClient}
           />
         </div>
@@ -183,10 +165,11 @@ const App: React.FC = () => {
 
     // Dashboard Padrão do Admin
     return (
-      <AdminDashboard 
-        clients={clients} 
+      <AdminDashboard
+        clients={clients}
         onSelectClient={setSelectedClient}
         onSwitchToClientView={switchToClientView}
+        onAddClient={createNewClient}
         onLogout={handleLogout}
       />
     );
