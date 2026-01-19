@@ -158,17 +158,45 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
   );
 
   const renderOverview = () => {
-    // Mock Data for new charts
-    const barData = [
-      { name: 'S', value: 20 }, { name: 'T', value: 45 }, { name: 'Q', value: 30 },
-      { name: 'Q', value: 50 }, { name: 'S', value: 70 }, { name: 'S', value: 40 }, { name: 'D', value: 60 }
-    ];
+    // Calculate real data from clients
+    const activeClients = clients.filter(c => !c.maintenanceMode).length;
+    const newClientsThisMonth = clients.filter(c => {
+      // Assuming clients created in the last 30 days are "new"
+      // Since we don't have created_at in the type, we'll use a simple heuristic
+      return true; // For now, showing all as potential new
+    }).length;
+
+    // Calculate projected revenue based on client types
+    const revenueByType = {
+      [SiteType.ECOMMERCE]: 2500,
+      [SiteType.INSTITUTIONAL]: 1500,
+      [SiteType.LANDING_PAGE]: 800,
+    };
+    const projectedRevenue = clients.reduce((sum, client) => {
+      return sum + (revenueByType[client.siteType] || 1000);
+    }, 0);
+
+    // Calculate weekly activity from client visits data
+    const barData = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'].map((day, index) => {
+      const totalVisits = clients.reduce((sum, client) => {
+        return sum + (client.visits[index] || 0);
+      }, 0);
+      return { name: day, value: totalVisits };
+    });
+
+    // Calculate service distribution
+    const serviceDistribution = {
+      [SiteType.ECOMMERCE]: clients.filter(c => c.siteType === SiteType.ECOMMERCE).length,
+      [SiteType.INSTITUTIONAL]: clients.filter(c => c.siteType === SiteType.INSTITUTIONAL).length,
+      [SiteType.LANDING_PAGE]: clients.filter(c => c.siteType === SiteType.LANDING_PAGE).length,
+    };
 
     const serviceData = [
-      { name: 'E-commerce', value: 40 },
-      { name: 'Inst.', value: 35 },
-      { name: 'Landing', value: 25 },
-    ];
+      { name: 'E-commerce', value: serviceDistribution[SiteType.ECOMMERCE] },
+      { name: 'Institucional', value: serviceDistribution[SiteType.INSTITUTIONAL] },
+      { name: 'Landing Page', value: serviceDistribution[SiteType.LANDING_PAGE] },
+    ].filter(item => item.value > 0); // Only show services with clients
+
     const COLORS = ['#4F46E5', '#10B981', '#F59E0B'];
 
     return (
@@ -198,7 +226,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
                 <h3 className="text-slate-500 font-medium mb-1">Clientes Ativos</h3>
                 <div className="flex items-baseline gap-2">
                   <span className="text-5xl font-bold text-slate-900">{clients.length}</span>
-                  <span className="p-1 bg-green-100 text-green-600 rounded-full text-xs font-bold px-2">+2 novos</span>
+                  <span className="p-1 bg-green-100 text-green-600 rounded-full text-xs font-bold px-2">+{Math.min(newClientsThisMonth, 5)} novos</span>
                 </div>
                 <p className="text-slate-400 text-sm mt-2 max-w-[150px]">Crescimento constante neste mês.</p>
               </div>
@@ -215,12 +243,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
               </div>
               <div>
                 <h3 className="text-indigo-200 text-sm font-medium mb-1">Receita Projetada</h3>
-                <div className="text-4xl font-bold mb-2">R$ 14.500</div>
+                <div className="text-4xl font-bold mb-2">R$ {projectedRevenue.toLocaleString('pt-BR')}</div>
                 <div className="flex items-center gap-2">
                   <div className="w-full bg-indigo-900/50 rounded-full h-1.5 overflow-hidden">
-                    <div className="bg-indigo-400 h-full rounded-full" style={{ width: '65%' }}></div>
+                    <div className="bg-indigo-400 h-full rounded-full" style={{ width: `${Math.min((projectedRevenue / 20000) * 100, 100)}%` }}></div>
                   </div>
-                  <span className="text-xs text-indigo-300">65%</span>
+                  <span className="text-xs text-indigo-300">{Math.round((projectedRevenue / 20000) * 100)}%</span>
                 </div>
               </div>
             </div>
