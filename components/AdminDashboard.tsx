@@ -225,84 +225,132 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
   );
 
   const renderClients = () => (
-    <div className="space-y-6 animate-fadeIn">
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">Meus Clientes</h2>
-          <p className="text-slate-500">Gerencie acessos e visualize os projetos.</p>
-        </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-slate-900 text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-slate-800 transition-colors shadow-lg shadow-slate-200">
-          <Plus size={18} /> Novo Cliente
-        </button>
-      </div>
+    <div className="space-y-6 animate-fadeIn font-sans text-slate-600">
 
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+      {/* Top Toolbar */}
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-xl border border-slate-200">
+        <div className="flex gap-2 w-full md:w-auto overflow-x-auto">
+          <button className="text-red-500 font-bold bg-red-50 px-4 py-2 rounded-lg text-sm whitespace-nowrap border border-red-100 flex items-center gap-2">
+            <Users size={16} /> Todos
+          </button>
+          <button className="text-slate-500 font-medium px-4 py-2 rounded-lg text-sm whitespace-nowrap hover:bg-slate-50 flex items-center gap-2">
+            <Briefcase size={16} /> Empresa
+          </button>
+          <button className="text-slate-500 font-medium px-4 py-2 rounded-lg text-sm whitespace-nowrap hover:bg-slate-50 flex items-center gap-2">
+            <Users size={16} /> Contato
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="relative flex-1 md:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
               type="text"
-              placeholder="Buscar por nome ou empresa..."
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 rounded-xl border-none focus:ring-2 focus:ring-indigo-500 outline-none"
+              placeholder="Buscar"
+              className="w-full pl-9 pr-4 py-2 bg-slate-50 rounded-lg border border-slate-200 text-sm outline-none focus:ring-1 focus:ring-slate-300"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+          <button className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 flex items-center gap-2">
+            <ArrowUpRight size={16} /> Importar
+          </button>
+          <button className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 flex items-center gap-2">
+            Filtrar
+          </button>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="bg-red-500 text-white w-10 h-10 rounded-lg flex items-center justify-center hover:bg-red-600 shadow-md shadow-red-200"
+          >
+            <Plus size={20} />
+          </button>
         </div>
+      </div>
+
+      {/* Main Table */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+
+        {/* Accordion Header */}
+        <div className="px-6 py-4 flex items-center gap-2 border-b border-slate-100 cursor-pointer hover:bg-slate-50">
+          <div className="w-4 h-4 rounded border border-slate-300 flex items-center justify-center">
+            <div className="transform rotate-45 mb-[2px] ml-[1px] hidden">L</div>
+          </div>
+          <span className="text-green-600 font-bold text-sm tracking-wide flex items-center gap-2">
+            <ChevronRight size={16} className="text-green-600" />
+            Contatos ativos ({filteredClients.length})
+          </span>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
-            <thead className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-semibold">
+            <thead className="bg-white text-[10px] text-slate-400 uppercase tracking-wider font-bold border-b border-slate-100">
               <tr>
-                <th className="px-6 py-4">Cliente</th>
-                <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4">Tipo de Site</th>
-                <th className="px-6 py-4">Hospedagem</th>
-                <th className="px-6 py-4 text-right">Ações</th>
+                <th className="px-4 py-4 w-10 text-center"><input type="checkbox" className="rounded border-slate-300" /></th>
+                <th className="px-4 py-4">Contato</th>
+                <th className="px-4 py-4">E-mail</th>
+                <th className="px-4 py-4">Conta</th>
+                <th className="px-4 py-4">Negociação</th>
+                <th className="px-4 py-4">Valor Estimado</th>
+                <th className="px-4 py-4">Telefone</th>
+                <th className="px-4 py-4">Cargo</th>
+                <th className="px-4 py-4">Tipo</th>
+                <th className="px-4 py-4 w-10"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-sm">
-              {filteredClients.map(client => (
-                <tr key={client.id} className="hover:bg-slate-50 group transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
-                        {client.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="font-bold text-slate-800">{client.name}</p>
-                        <p className="text-slate-400 text-xs">{client.company}</p>
-                      </div>
-                    </div>
+            <tbody className="text-sm font-medium">
+              {filteredClients.map((client, index) => (
+                <tr key={client.id} className="hover:bg-slate-50 border-b border-slate-50 last:border-none group">
+                  <td className="px-4 py-5 text-center">
+                    <input type="checkbox" className="rounded border-slate-300 text-green-500 focus:ring-green-200" />
                   </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold flex w-fit items-center gap-1 ${client.maintenanceMode ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'
-                      }`}>
-                      <div className={`w-1.5 h-1.5 rounded-full ${client.maintenanceMode ? 'bg-orange-500' : 'bg-green-500'}`}></div>
-                      {client.maintenanceMode ? 'Manutenção' : 'Ativo'}
+                  <td className="px-4 py-5 font-bold text-slate-800">{client.name}</td>
+                  <td className="px-4 py-5 text-blue-500 hover:underline cursor-pointer">{client.email}</td>
+                  <td className="px-4 py-5">
+                    <span className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-xs font-bold text-slate-600 flex items-center w-fit gap-1">
+                      <span className="w-2 h-2 rounded-full bg-slate-400"></span>
+                      {client.company}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-slate-600">{client.siteType}</td>
-                  <td className="px-6 py-4 font-mono text-xs text-slate-500">{client.hostingExpiry}</td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => onSwitchToClientView(client)}
-                        className="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors"
-                      >
-                        Acessar Portal
-                      </button>
-                      <a href={`https://${client.siteUrl}`} target="_blank" rel="noreferrer" className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
-                        <ExternalLink size={16} />
-                      </a>
+                  <td className="px-4 py-5">
+                    <div className="flex flex-col">
+                      <span className="text-green-700 text-xs font-bold flex items-center gap-1">
+                        <div className="w-4 h-4 rounded-full bg-green-100 flex items-center justify-center text-[10px]">▼</div>
+                        {client.maintenanceMode ? 'Em Manutenção' : 'Proposta Comercial'}
+                      </span>
                     </div>
+                  </td>
+                  <td className="px-4 py-5 text-slate-500">R$ {(1200 + index * 350).toLocaleString('pt-BR')}</td>
+                  <td className="px-4 py-5">
+                    <div className="flex items-center gap-1">
+                      <img src="https://flagcdn.com/w20/br.png" width="16" alt="Brazil" />
+                      <span className="text-xs text-slate-600">+55 48 999{index}1-2345</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-5 text-cyan-500 font-bold text-xs uppercase">CEO</td>
+                  <td className="px-4 py-5">
+                    <button
+                      onClick={() => onSwitchToClientView(client)}
+                      className="px-6 py-1 bg-blue-500 text-white text-xs font-bold rounded shadow-sm shadow-blue-200 hover:bg-blue-600 transition-colors"
+                    >
+                      Cliente
+                    </button>
+                  </td>
+                  <td className="px-4 py-5 text-center text-slate-300 hover:text-slate-600 cursor-pointer">
+                    <MoreVertical size={16} />
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+
+          <div className="px-6 py-4 border-t border-slate-100 text-sm text-red-400 font-medium flex items-center gap-2 cursor-pointer hover:bg-slate-50">
+            <ChevronRight size={16} /> Contatos inativos (0)
+          </div>
         </div>
+      </div>
+
+      <div className="px-4 py-2 text-xs text-slate-400 flex items-center gap-2 cursor-pointer hover:text-slate-600">
+        <Plus size={14} /> Adicionar contato
       </div>
     </div>
   );
