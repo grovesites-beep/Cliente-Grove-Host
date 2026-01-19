@@ -3,7 +3,7 @@ import { ClientData, Product, Contract, PasswordVaultItem } from '../types';
 import {
     X, User, Mail, Phone, MapPin, Globe, Calendar, Lock, FileText,
     Package, CreditCard, Key, Edit, Trash2, Plus, Eye, EyeOff, Copy,
-    Check, Building2, UserCircle, StickyNote, Settings2, ChevronRight
+    Check, Building2, UserCircle, StickyNote, Settings2, ChevronRight, DollarSign
 } from 'lucide-react';
 import { formatPhoneBR, formatDateBR, formatCurrencyBR, formatCEP } from '../utils/formatters';
 
@@ -125,24 +125,22 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({ client, onClose, o
                         </div>
                     </div>
 
-                    {/* Info Grid */}
-                    <div className="grid grid-cols-4 gap-px bg-slate-100 border border-slate-100 rounded-2xl overflow-hidden mb-10">
-                        <div className="bg-white p-6">
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-2 tracking-wide">Responsável</label>
-                            <p className="text-sm font-bold text-slate-800">{client.responsiblePerson || 'Não definido'}</p>
-                        </div>
-                        <div className="bg-white p-6">
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-2 tracking-wide">Empresa</label>
-                            <p className="text-sm font-bold text-slate-800">{client.company}</p>
-                        </div>
-                        <div className="bg-white p-6">
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-2 tracking-wide">Tipo de Site</label>
-                            <p className="text-sm font-bold text-slate-800">{client.siteType}</p>
-                        </div>
-                        <div className="bg-white p-6">
-                            <label className="block text-xs font-bold text-slate-400 uppercase mb-2 tracking-wide">Investimento Mensal</label>
-                            <p className="text-sm font-bold text-slate-800">{formatCurrencyBR(2500)}</p>
-                        </div>
+                    {/* Main Stats Banner */}
+                    <div className="flex gap-4 mb-10">
+                        {[
+                            { label: 'Responsável', value: client.responsiblePerson || 'Não definido', icon: UserCircle },
+                            { label: 'Empresa', value: client.company, icon: Building2 },
+                            { label: 'Tipo de Site', value: client.siteType, icon: Globe },
+                            { label: 'MRR do Cliente', value: formatCurrencyBR(1500), icon: DollarSign },
+                        ].map((stat, i) => (
+                            <div key={i} className="flex-1 bg-slate-50 p-5 rounded-[25px] border border-slate-100/50">
+                                <label className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+                                    <stat.icon size={12} className="text-indigo-600" />
+                                    {stat.label}
+                                </label>
+                                <p className="text-sm font-black text-slate-800 truncate">{stat.value}</p>
+                            </div>
+                        ))}
                     </div>
 
                     {/* Status Flow Indicator */}
@@ -199,39 +197,29 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({ client, onClose, o
                                     Informações de Contato
                                 </h3>
 
-                                <div className="bg-slate-50 p-6 rounded-2xl space-y-4 border border-slate-100">
-                                    <div>
-                                        <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1 block">Nome Completo</label>
-                                        {isEditing ? (
-                                            <input type="text" value={editedClient.name} onChange={e => setEditedClient({ ...editedClient, name: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" />
-                                        ) : (
+                                <div className="bg-white p-6 rounded-3xl space-y-5 border border-slate-100 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
+                                    <div className="flex items-center justify-between pb-4 border-b border-slate-50">
+                                        <div>
+                                            <label className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1 block">Nome Completo</label>
                                             <p className="text-slate-800 font-bold text-lg">{client.name}</p>
-                                        )}
+                                        </div>
+                                        <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400"><User size={18} /></div>
                                     </div>
-                                    <div>
-                                        <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1 block">Email Principal</label>
-                                        {isEditing ? (
-                                            <input type="email" value={editedClient.email} onChange={e => setEditedClient({ ...editedClient, email: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" />
-                                        ) : (
+                                    <div className="flex items-center justify-between pb-4 border-b border-slate-50">
+                                        <div>
+                                            <label className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1 block">Email Principal</label>
                                             <p className="text-slate-800 font-medium">{client.email}</p>
-                                        )}
+                                        </div>
+                                        <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400"><Mail size={18} /></div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1 block">Telefone</label>
-                                            {isEditing ? (
-                                                <input type="text" value={editedClient.phone || ''} onChange={e => setEditedClient({ ...editedClient, phone: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" />
-                                            ) : (
-                                                <p className="text-slate-800 font-medium">{client.phone ? formatPhoneBR(client.phone) : 'Não informado'}</p>
-                                            )}
+                                        <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50">
+                                            <label className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1 block">Telefone</label>
+                                            <p className="text-slate-800 font-black text-sm">{client.phone ? formatPhoneBR(client.phone) : '—'}</p>
                                         </div>
-                                        <div>
-                                            <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1 block">Responsável</label>
-                                            {isEditing ? (
-                                                <input type="text" value={editedClient.responsiblePerson || ''} onChange={e => setEditedClient({ ...editedClient, responsiblePerson: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" />
-                                            ) : (
-                                                <p className="text-slate-800 font-medium">{client.responsiblePerson || 'Não informado'}</p>
-                                            )}
+                                        <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50">
+                                            <label className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1 block">Responsável</label>
+                                            <p className="text-slate-800 font-black text-sm">{client.responsiblePerson || '—'}</p>
                                         </div>
                                     </div>
                                 </div>

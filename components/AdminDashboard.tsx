@@ -11,6 +11,9 @@ import {
   BarChart, Bar, PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { ClientDetails } from './ClientDetails';
+import { ClientEditModal } from './ClientEditModal';
+import { ContractManager } from './ContractManager';
+import { ProductManager } from './ProductManager';
 import { ConfirmationModal } from './ConfirmationModal';
 import { useToastContext } from '../contexts/ToastContext';
 import { notificationService } from '../services/notificationService';
@@ -123,6 +126,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
   // Client Details Modal State
   const [selectedClientForDetails, setSelectedClientForDetails] = useState<ClientData | null>(null);
   const [isClientDetailsOpen, setIsClientDetailsOpen] = useState(false);
+
+  // Client FULL Edit Modal State
+  const [selectedClientForEdit, setSelectedClientForEdit] = useState<ClientData | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Deletion/Logout Confirmation State
   const [confirmModal, setConfirmModal] = useState<{
@@ -627,14 +634,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
                       </a>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedClientForDetails(client);
-                            setIsClientDetailsOpen(true);
+                            setSelectedClientForEdit(client);
+                            setIsEditModalOpen(true);
                           }}
-                          className="p-2 hover:bg-indigo-50 text-indigo-600 rounded-lg transition-colors"
+                          className="p-2 bg-indigo-50 lg:bg-transparent hover:bg-white rounded-lg text-indigo-600 lg:text-indigo-400 lg:hover:text-indigo-600 transition-all shadow-sm border border-transparent hover:border-slate-100"
+                          title="Editar Cadastro Completo"
                         >
                           <Edit2 size={16} />
                         </button>
@@ -645,11 +653,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
                               isOpen: true,
                               type: 'danger',
                               title: 'Excluir Cliente',
-                              message: `Tem certeza que deseja excluir ${client.name}?`,
-                              onConfirm: () => onDeleteClient(client.id)
+                              message: `Tem certeza que deseja remover ${client.name}? Esta ação não pode ser desfeita.`,
+                              onConfirm: () => {
+                                onDeleteClient(client.id);
+                                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                              }
                             });
                           }}
-                          className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
+                          className="p-2 hover:bg-rose-50 text-rose-400 hover:text-rose-600 rounded-lg transition-colors"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -749,107 +760,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
   };
 
   const renderProducts = () => {
-    const products = [
-      { id: '1', name: 'Manutenção Mensal', price: 500, users: 12, category: 'Serviço' },
-      { id: '2', name: 'Hospedagem Premium', price: 150, users: 45, category: 'Infra' },
-      { id: '3', name: 'Gestão de Conteúdo', price: 1200, users: 8, category: 'Marketing' },
-      { id: '4', name: 'Suporte 24/7', price: 300, users: 15, category: 'Serviço' },
-    ];
-
     return (
-      <div className="space-y-6 animate-fadeIn">
-        <div className="flex justify-between items-center text-slate-800">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight">Catálogo de Produtos</h2>
-            <p className="text-slate-500 mt-1">Gerencie os planos e serviços oferecidos pela agência</p>
-          </div>
-          <button className="flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all">
-            <Plus size={20} /> Novo Produto
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {products.map(product => (
-            <div key={product.id} className="bg-white p-6 rounded-[30px] border border-slate-100 shadow-sm hover:shadow-md transition-all group">
-              <div className="flex justify-between items-start mb-4">
-                <div className="p-3 bg-indigo-50 rounded-2xl text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                  <Package size={24} />
-                </div>
-                <span className="text-xs px-2 py-1 bg-slate-100 text-slate-400 rounded-lg font-bold uppercase">{product.category}</span>
-              </div>
-              <h3 className="text-lg font-bold text-slate-800 mb-1">{product.name}</h3>
-              <p className="text-2xl font-black text-indigo-600 mb-4">{formatCurrencyBR(product.price)}<span className="text-xs text-slate-400 font-normal">/mês</span></p>
-              <div className="flex items-center gap-2 text-sm text-slate-500">
-                <Users size={16} />
-                <span>{product.users} clientes ativos</span>
-              </div>
-              <div className="mt-6 flex gap-2">
-                <button className="flex-1 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg text-sm font-bold transition-colors">Editar</button>
-                <button className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"><Trash2 size={18} /></button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <ProductManager
+        clients={clients}
+        onUpdateClient={onUpdateClient}
+      />
     );
   };
 
   const renderContracts = () => {
     return (
-      <div className="space-y-6 animate-fadeIn">
-        <div className="flex justify-between items-center text-slate-800">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight">Gestão de Contratos</h2>
-            <p className="text-slate-500 mt-1">Controle legal e vigência de parcerias</p>
-          </div>
-          <button className="flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all">
-            <Plus size={20} /> Novo Contrato
-          </button>
-        </div>
-
-        <div className="bg-white rounded-[30px] border border-slate-200 shadow-sm overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-slate-50 border-b border-slate-100">
-              <tr>
-                <th className="px-8 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Contrato / Cliente</th>
-                <th className="px-8 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Período</th>
-                <th className="px-8 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Valor Total</th>
-                <th className="px-8 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                <th className="px-8 py-5 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {clients.slice(0, 6).map((client) => (
-                <tr key={client.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-8 py-5">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600">
-                        <FileText size={18} />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-slate-800">Contrato de Prestação de Serviços</p>
-                        <p className="text-xs text-slate-400">{client.company}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-8 py-5 text-sm text-slate-600">
-                    Jan 2026 - Jan 2027
-                  </td>
-                  <td className="px-8 py-5 text-sm font-bold text-slate-800">
-                    {formatCurrencyBR(18000)}
-                  </td>
-                  <td className="px-8 py-5">
-                    <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-bold rounded-full border border-emerald-100 uppercase tracking-wider">Vigente</span>
-                  </td>
-                  <td className="px-8 py-5 text-center">
-                    <button className="p-2 hover:bg-white rounded-lg text-slate-400 hover:text-indigo-600 transition-all shadow-sm"><ExternalLink size={18} /></button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <ContractManager
+        clients={clients}
+        onUpdateClient={onUpdateClient}
+      />
     );
   };
 
@@ -1259,27 +1183,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
       {isClientDetailsOpen && selectedClientForDetails && (
         <ClientDetails
           client={selectedClientForDetails}
-          onClose={() => {
-            setIsClientDetailsOpen(false);
-            setSelectedClientForDetails(null);
-          }}
-          onUpdate={(updatedClient) => {
-            onUpdateClient(updatedClient.id, updatedClient);
-            setIsClientDetailsOpen(false);
-            setSelectedClientForDetails(null);
+          onClose={() => setIsClientDetailsOpen(false)}
+          onUpdate={(updated) => onUpdateClient(updated.id, updated)}
+        />
+      )}
+
+      {isEditModalOpen && selectedClientForEdit && (
+        <ClientEditModal
+          client={selectedClientForEdit}
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          onSave={(updated) => {
+            onUpdateClient(updated.id, updated);
+            setIsEditModalOpen(false);
           }}
         />
       )}
 
       <ConfirmationModal
         isOpen={confirmModal.isOpen}
-        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
-        onConfirm={confirmModal.onConfirm}
+        type={confirmModal.type}
         title={confirmModal.title}
         message={confirmModal.message}
-        type={confirmModal.type}
-        confirmText="Confirmar"
-        cancelText="Cancelar"
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );
