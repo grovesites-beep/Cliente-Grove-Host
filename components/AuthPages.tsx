@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { User, ShieldCheck, ArrowRight, Lock, Mail, Layout, ArrowLeft, Star, Phone, Zap, Clock } from 'lucide-react';
 
+import { signIn } from '../services/supabaseClient';
+
 interface AuthPagesProps {
   onLoginAdmin: () => void;
   onLoginClient: (email: string) => void;
 }
+
+const ADMIN_EMAILS = ['admin@nexushub.com', 'seuemail@exemplo.com']; // Adicione seu email aqui
 
 export const AuthPages: React.FC<AuthPagesProps> = ({ onLoginAdmin, onLoginClient }) => {
   const [email, setEmail] = useState('');
@@ -12,25 +16,34 @@ export const AuthPages: React.FC<AuthPagesProps> = ({ onLoginAdmin, onLoginClien
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    setTimeout(() => {
-      // Simulação de autenticação inteligente de Papel (Role)
-      if (email === 'admin@nexushub.com') {
-        if (password === 'admin123') {
-          onLoginAdmin();
-        } else {
-          setError('Senha inválida para administrador.');
-          setIsLoading(false);
-        }
-      } else {
-        // Autenticação de Ciente (Simulada)
-        onLoginClient(email);
+    try {
+      // 1. Tentar Login no Supabase Auth
+      const { data, error } = await signIn(email, password);
+
+      if (error) {
+        setError('Email ou senha incorretos.');
+        setIsLoading(false);
+        return;
       }
-    }, 1500);
+
+      const userEmail = data.user?.email || '';
+
+      // 2. Verificar Permissão (Simples baseada em Email por enquanto, ou verificar na tabela 'clients')
+      if (ADMIN_EMAILS.includes(userEmail) || email === 'admin@nexushub.com') { // admin@nexushub.com hardcoded como fallback provisório
+        onLoginAdmin();
+      } else {
+        onLoginClient(userEmail);
+      }
+
+    } catch (err) {
+      setError('Erro ao conectar com o servidor.');
+      setIsLoading(false);
+    }
   };
 
   return (

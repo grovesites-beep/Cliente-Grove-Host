@@ -70,6 +70,27 @@ export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '');
 
 // --- Funções Auxiliares de Serviço ---
 
+export const signIn = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+    });
+    return { data, error };
+};
+
+export const signUp = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+    });
+    return { data, error };
+};
+
+export const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    return { error };
+};
+
 // Busca todos os clientes (Admin)
 export const fetchClients = async (): Promise<ClientData[]> => {
     const { data: clientsData, error } = await supabase
