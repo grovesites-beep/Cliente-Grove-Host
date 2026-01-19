@@ -4,6 +4,7 @@ import {
   Users, LayoutDashboard, Settings, LogOut, Search, Bell,
   Menu, ChevronRight, DollarSign, Briefcase, Plus, MoreVertical, ExternalLink, X, Save, FileText, ArrowUpRight, Database, Star, Mail, Phone
 } from 'lucide-react';
+import { formatDateBR, formatDateTimeBR, formatPhoneBR, formatCurrencyBR, getRelativeTimeBR } from '../utils/formatters';
 
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -204,7 +205,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
         <div className="flex justify-between items-end mb-4">
           <div>
             <h2 className="text-3xl font-bold tracking-tight">Visão Geral da Agência</h2>
-            <p className="text-slate-400 mt-1">Última atualização: Hoje, 14:30</p>
+            <p className="text-slate-400 mt-1">Última atualização: {formatDateTimeBR(new Date())}</p>
           </div>
           <div className="flex gap-2">
             <button className="p-2 bg-white rounded-full text-slate-400 hover:text-indigo-600 shadow-sm border border-slate-100 hover:border-indigo-100 transition-colors"><ArrowUpRight size={20} /></button>
@@ -243,7 +244,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
               </div>
               <div>
                 <h3 className="text-indigo-200 text-sm font-medium mb-1">Receita Projetada</h3>
-                <div className="text-4xl font-bold mb-2">R$ {projectedRevenue.toLocaleString('pt-BR')}</div>
+                <div className="text-4xl font-bold mb-2">{formatCurrencyBR(projectedRevenue)}</div>
                 <div className="flex items-center gap-2">
                   <div className="w-full bg-indigo-900/50 rounded-full h-1.5 overflow-hidden">
                     <div className="bg-indigo-400 h-full rounded-full" style={{ width: `${Math.min((projectedRevenue / 20000) * 100, 100)}%` }}></div>
@@ -478,7 +479,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
                         </div>
                         <div>
                           <p className="font-bold text-slate-800">{client.name}</p>
-                          <p className="text-xs text-slate-500">Cliente desde {new Date().toLocaleDateString()}</p>
+                          <p className="text-xs text-slate-500">Cliente desde {formatDateBR(new Date())}</p>
                         </div>
                       </div>
                     </td>
@@ -490,7 +491,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
                         </div>
                         <div className="flex items-center gap-2 text-sm text-slate-600">
                           <Phone size={14} className="text-slate-400" />
-                          (11) 9999-9999
+                          {formatPhoneBR('11999999999')}
                         </div>
                       </div>
                     </td>
