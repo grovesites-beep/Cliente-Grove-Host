@@ -5,7 +5,7 @@ import { AuthPages } from './components/AuthPages';
 // ... (imports remain)
 import { ClientData, UserRole, SiteType } from './types';
 import { ArrowLeft } from 'lucide-react';
-import { fetchClients, createClientInDb, fetchClientByEmail, seedDatabase, supabase, getUserRole } from './services/supabaseClient';
+import { fetchClients, createClientInDb, fetchClientByEmail, seedDatabase, supabase, getUserRole, signOut } from './services/supabaseClient';
 
 type AuthState = 'unauthenticated' | 'authenticated';
 
@@ -100,12 +100,45 @@ const App: React.FC = () => {
     setIsLoadingData(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut();
     setAuthState('unauthenticated');
     setCurrentUserRole(null);
     setSelectedClient(null);
     setIsImpersonating(false);
   };
+
+  // Monitor de Inatividade (30 minutos)
+  useEffect(() => {
+    if (authState !== 'authenticated') return;
+
+    let timeoutId: NodeJS.Timeout;
+    const INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 minutos
+
+    const resetTimer = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(async () => {
+        console.log('Sessão expirada por inatividade.');
+        await handleLogout();
+      }, INACTIVITY_LIMIT);
+    };
+
+    // Eventos que resetam o timer
+    window.addEventListener('mousemove', resetTimer);
+    window.addEventListener('keypress', resetTimer);
+    window.addEventListener('click', resetTimer);
+    window.addEventListener('scroll', resetTimer);
+
+    resetTimer(); // Inicia contagem
+
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('mousemove', resetTimer);
+      window.removeEventListener('keypress', resetTimer);
+      window.removeEventListener('click', resetTimer);
+      window.removeEventListener('scroll', resetTimer);
+    };
+  }, [authState]);
 
   // --- Handlers de Dados ---
 
