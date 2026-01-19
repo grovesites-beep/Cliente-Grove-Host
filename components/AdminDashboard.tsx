@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ClientData, SiteType } from '../types';
 import {
   Users, LayoutDashboard, Settings, LogOut, Search, Bell,
-  Menu, ChevronRight, DollarSign, Briefcase, Plus, MoreVertical, ExternalLink, X, Save, FileText, ArrowUpRight, Database, Star, Mail, Phone
+  Menu, ChevronRight, DollarSign, Briefcase, Plus, MoreVertical, ExternalLink, X, Save, FileText, ArrowUpRight, Database, Star, Mail, Phone, Package
 } from 'lucide-react';
 import { formatDateBR, formatDateTimeBR, formatPhoneBR, formatCurrencyBR, getRelativeTimeBR } from '../utils/formatters';
 
@@ -582,59 +582,129 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
         <div className="fixed inset-0 bg-black/20 z-40 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)}></div>
       )}
 
-      {/* Modern Sidebar */}
-      <aside className={`fixed lg:static inset-y-0 left-0 w-[280px] bg-white m-4 rounded-[30px] border border-slate-100 z-50 transform transition-transform duration-300 ease-in-out flex flex-col shadow-xl shadow-slate-200/50 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
-        <div className="p-8">
-          <div className="flex items-center gap-3 mb-10">
-            <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-200">N</div>
-            <div>
-              <h1 className="font-bold text-xl text-slate-800 tracking-tight">NexusHub</h1>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Admin Panel</p>
-            </div>
+      {/* Modern Sidebar - X Wallet Style */}
+      <div
+        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-[#0F0F0F] text-white transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          } flex flex-col`}
+      >
+        {/* Logo */}
+        <div className="p-6 flex items-center gap-3">
+          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center">
+            <Star size={24} className="text-white" fill="white" />
           </div>
-
-          <nav className="space-y-2">
-            <div className="pb-4">
-              <p className="text-xs font-bold text-slate-300 uppercase px-4 mb-2">Menu</p>
-              <button onClick={() => setActiveTab('overview')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${activeTab === 'overview' ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}>
-                <LayoutDashboard size={20} /> Visão Geral
-              </button>
-              <button onClick={() => setActiveTab('clients')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${activeTab === 'clients' ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}>
-                <Users size={20} /> Clientes
-              </button>
-              <button onClick={() => setActiveTab('finance')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${activeTab === 'finance' ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}>
-                <DollarSign size={20} /> Financeiro
-              </button>
-            </div>
-
-            <div>
-              <p className="text-xs font-bold text-slate-300 uppercase px-4 mb-2">Geral</p>
-              <button onClick={() => setActiveTab('settings')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all ${activeTab === 'settings' ? 'bg-indigo-50 text-indigo-600 font-bold' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}>
-                <Settings size={20} /> Configurações
-              </button>
-            </div>
-          </nav>
+          <span className="text-xl font-bold">NexusHub</span>
         </div>
 
-        <div className="mt-auto p-8">
-          <div className="bg-slate-900 rounded-2xl p-4 relative overflow-hidden group cursor-pointer mb-4">
-            <div className="absolute top-0 right-0 w-16 h-16 bg-white/10 rounded-full -mr-8 -mt-8"></div>
-            <div className="relative z-10 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white">
-                <Star size={16} fill="white" />
-              </div>
-              <div>
-                <p className="text-white text-sm font-bold">Pro Plan</p>
-                <p className="text-white/60 text-xs">Acesso total</p>
-              </div>
-            </div>
-          </div>
+        {/* Navigation */}
+        <nav className="flex-1 px-4 space-y-1">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'overview'
+              ? 'bg-white/10 text-white'
+              : 'text-white/60 hover:bg-white/5 hover:text-white'
+              }`}
+          >
+            <LayoutDashboard size={20} />
+            <span className="font-medium">Dashboard</span>
+          </button>
 
-          <button onClick={onLogout} className="w-full flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-red-500 transition-colors text-sm font-bold">
-            <LogOut size={20} /> Sair da conta
+          <button
+            onClick={() => setActiveTab('clients')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'clients'
+              ? 'bg-white/10 text-white'
+              : 'text-white/60 hover:bg-white/5 hover:text-white'
+              }`}
+          >
+            <Users size={20} />
+            <span className="font-medium">Clientes</span>
+            <span className="ml-auto bg-indigo-600 text-white text-xs font-bold px-2 py-1 rounded-full">
+              {clients.length}
+            </span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('finance')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'finance'
+              ? 'bg-white/10 text-white'
+              : 'text-white/60 hover:bg-white/5 hover:text-white'
+              }`}
+          >
+            <DollarSign size={20} />
+            <span className="font-medium">Financeiro</span>
+          </button>
+
+          <button
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/60 hover:bg-white/5 hover:text-white transition-all"
+          >
+            <Package size={20} />
+            <span className="font-medium">Produtos</span>
+          </button>
+
+          <button
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/60 hover:bg-white/5 hover:text-white transition-all"
+          >
+            <FileText size={20} />
+            <span className="font-medium">Contratos</span>
+          </button>
+
+          <button
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/60 hover:bg-white/5 hover:text-white transition-all relative"
+          >
+            <Bell size={20} />
+            <span className="font-medium">Notificações</span>
+            <span className="ml-auto w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('settings')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'settings'
+              ? 'bg-white/10 text-white'
+              : 'text-white/60 hover:bg-white/5 hover:text-white'
+              }`}
+          >
+            <Settings size={20} />
+            <span className="font-medium">Configurações</span>
+          </button>
+        </nav>
+
+        {/* Promotional Card */}
+        <div className="m-4 p-6 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
+
+          <div className="relative z-10">
+            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-4 backdrop-blur-sm">
+              <Star size={24} className="text-white" />
+            </div>
+            <h3 className="text-white font-bold text-lg mb-2">
+              Novidades!
+            </h3>
+            <p className="text-white/80 text-sm mb-4">
+              Confira as novas funcionalidades do sistema
+            </p>
+            <button className="w-full bg-white text-indigo-600 font-bold py-2 px-4 rounded-xl hover:bg-white/90 transition-colors text-sm flex items-center justify-center gap-2">
+              Ver Agora
+              <ArrowUpRight size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* Bottom Section */}
+        <div className="p-4 border-t border-white/10 space-y-2">
+          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/60 hover:bg-white/5 hover:text-white transition-all">
+            <FileText size={20} />
+            <span className="font-medium">Ajuda</span>
+          </button>
+
+          <button
+            onClick={onLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-all"
+          >
+            <LogOut size={20} />
+            <span className="font-medium">Sair</span>
           </button>
         </div>
-      </aside>
+      </div>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
@@ -645,6 +715,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
           </div>
 
           <div className="flex items-center gap-6">
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="lg:hidden w-10 h-10 rounded-full bg-white border border-slate-100 flex items-center justify-center text-slate-600 hover:text-indigo-600 transition-colors shadow-sm"
+            >
+              <Menu size={20} />
+            </button>
+
             {/* Inspiration Pill Menu */}
             <div className="hidden md:flex bg-white p-1.5 rounded-full border border-slate-100 shadow-sm">
               <button className="px-4 py-1.5 bg-slate-900 text-white rounded-full text-xs font-bold shadow-md">Dashboard</button>
