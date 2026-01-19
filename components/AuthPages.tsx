@@ -8,7 +8,8 @@ interface AuthPagesProps {
   onLoginClient: (email: string) => void;
 }
 
-const ADMIN_EMAILS = ['admin@nexushub.com', 'seuemail@exemplo.com']; // Adicione seu email aqui
+// TODO: Em produção, mover esta lista para variáveis de ambiente (VITE_ADMIN_EMAILS) ou tabela 'users' no banco com coluna 'role'.
+const ADMIN_EMAILS = ['admin@nexushub.com', 'nei@grovehub.com.br'];
 
 export const AuthPages: React.FC<AuthPagesProps> = ({ onLoginAdmin, onLoginClient }) => {
   const [email, setEmail] = useState('');
