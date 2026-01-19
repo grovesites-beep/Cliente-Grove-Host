@@ -25,18 +25,81 @@ export interface BlogPost {
   content?: string;
 }
 
+export interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  active: boolean;
+}
+
+export interface Contract {
+  id: string;
+  title: string;
+  startDate: string;
+  endDate: string;
+  value: number;
+  status: 'active' | 'expired' | 'pending';
+  fileUrl?: string;
+}
+
+export interface PasswordVaultItem {
+  id: string;
+  service: string;
+  username: string;
+  password: string;
+  url?: string;
+  notes?: string;
+}
+
 export interface ClientData {
   id: string;
+  // Basic Info
   name: string;
   company: string;
   email: string;
+  phone?: string;
+  avatar?: string;
+
+  // Responsible Person
+  responsiblePerson?: string;
+
+  // Address
+  address?: {
+    street: string;
+    number: string;
+    complement?: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+    zipCode: string;
+  };
+
+  // Website
   siteUrl: string;
   siteType: SiteType;
   hostingExpiry: string;
   maintenanceMode: boolean;
+
+  // Access
+  password?: string; // For client portal login
+
+  // Notes
+  notes?: string;
+
+  // Relations
   integrations: Integration[];
   posts: BlogPost[];
-  visits: number[]; // Simple analytics data
+  products?: Product[];
+  contracts?: Contract[];
+  passwordVault?: PasswordVaultItem[];
+
+  // Analytics
+  visits: number[];
+
+  // Metadata
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface GenerateBlogParams {
