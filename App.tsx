@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { AdminDashboard } from './components/AdminDashboard';
 import { ClientPortal } from './components/ClientPortal';
 import { AuthPages } from './components/AuthPages';
-// ... (imports remain)
+import { ToastContainer } from './components/Toast';
 import { ClientData, UserRole, SiteType } from './types';
 import { ArrowLeft } from 'lucide-react';
 import { fetchClients, createClientInDb, fetchClientByEmail, seedDatabase, supabase, getUserRole, signOut } from './services/supabaseClient';
+import { useToast } from './hooks/useToast';
 
 type AuthState = 'unauthenticated' | 'authenticated';
 
@@ -21,6 +22,9 @@ const App: React.FC = () => {
 
   // Flag para saber se é um admin visualizando como cliente
   const [isImpersonating, setIsImpersonating] = useState(false);
+
+  // Toast notifications
+  const toast = useToast();
 
   // Carregar dados e Verificar Sessão ao Iniciar
   useEffect(() => {
@@ -95,7 +99,7 @@ const App: React.FC = () => {
       setSelectedClient(client);
       setIsImpersonating(false);
     } else {
-      alert('Cliente não encontrado. Verifique o e-mail ou contate o suporte.');
+      toast.error('Cliente não encontrado. Verifique o e-mail ou contate o suporte.');
     }
     setIsLoadingData(false);
   };
@@ -150,21 +154,24 @@ const App: React.FC = () => {
       // Atualiza a lista local
       const updatedList = await fetchClients();
       setClients(updatedList);
-      alert('Cliente cadastrado com sucesso!');
+      toast.success('Cliente cadastrado com sucesso!');
     } catch (error) {
       console.error("Erro ao criar cliente:", error);
-      alert('Erro ao salvar no banco de dados.');
+      toast.error('Erro ao salvar no banco de dados.');
     }
   };
 
   const handleSeedDatabase = async () => {
-    if (confirm('Deseja popular o banco de dados com dados de teste?')) {
+    try {
       setIsLoadingData(true);
       await seedDatabase();
       const updated = await fetchClients();
       setClients(updated);
       setIsLoadingData(false);
-      alert('Banco de dados povoado!');
+      toast.success('Banco de dados povoado com sucesso!');
+    } catch (error) {
+      setIsLoadingData(false);
+      toast.error('Erro ao popular banco de dados.');
     }
   };
 
@@ -269,11 +276,17 @@ const App: React.FC = () => {
         onSwitchToClientView={switchToClientView}
         onAddClient={createNewClient}
         onLogout={handleLogout}
+        onSeedDatabase={handleSeedDatabase}
       />
     );
   }
 
-  return <div>Erro de Estado</div>;
+  return (
+    <>
+      <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
+      <div>Erro de Estado</div>
+    </>
+  );
 };
 
 export default App;
