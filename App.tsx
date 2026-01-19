@@ -5,7 +5,7 @@ import { AuthPages } from './components/AuthPages';
 import { ToastContainer } from './components/Toast';
 import { ClientData, UserRole, SiteType } from './types';
 import { ArrowLeft } from 'lucide-react';
-import { fetchClients, createClientInDb, fetchClientByEmail, seedDatabase, supabase, getUserRole, signOut } from './services/supabaseClient';
+import { fetchClients, createClientInDb, updateClientInDb, deleteClientFromDb, fetchClientByEmail, seedDatabase, supabase, getUserRole, signOut } from './services/supabaseClient';
 import { useToast } from './hooks/useToast';
 
 type AuthState = 'unauthenticated' | 'authenticated';
@@ -146,18 +146,47 @@ const App: React.FC = () => {
 
   // --- Handlers de Dados ---
 
-  const createNewClient = async (newClientData: Omit<ClientData, 'id'>) => {
+  const createNewClient = async (clientData: Omit<ClientData, 'id'>) => {
     try {
-      // Salva no Supabase
-      await createClientInDb(newClientData);
-
-      // Atualiza a lista local
-      const updatedList = await fetchClients();
-      setClients(updatedList);
-      toast.success('Cliente cadastrado com sucesso!');
+      const newClientId = await createClientInDb(clientData);
+      // Recarrega a lista de clientes
+      const updatedClients = await fetchClients();
+      setClients(updatedClients);
+      toast.success('Cliente criado com sucesso!');
     } catch (error) {
-      console.error("Erro ao criar cliente:", error);
-      toast.error('Erro ao salvar no banco de dados.');
+      console.error('Erro ao criar cliente:', error);
+      toast.error('Erro ao criar cliente. Tente novamente.');
+    }
+  };
+
+  const handleUpdateClient = async (clientId: string, updates: Partial<ClientData>) => {
+    try {
+      await updateClientInDb(clientId, updates);
+      // Recarrega a lista de clientes
+      const updatedClients = await fetchClients();
+      setClients(updatedClients);
+      toast.success('Cliente atualizado com sucesso!', 'success');
+    } catch (error) {
+      console.error('Erro ao atualizar cliente:', error);
+      toast.error('Erro ao atualizar cliente. Tente novamente.');
+    }
+  };
+
+  const handleDeleteClient = async (clientId: string) => {
+    // Confirmação antes de deletar
+    if (!window.confirm('Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+
+    try {
+      await deleteClientFromDb(clientId);
+      // Recarrega a lista de clientes
+      const updatedClients = await fetchClients();
+      setClients(updatedClients);
+      toast.success('Cliente excluído com sucesso!', 'success');
+    } catch (error) {
+      console.error('Erro ao excluir cliente:', error);
+      toast.error('Erro ao excluir cliente. Tente novamente.');
     }
   };
 
@@ -173,13 +202,6 @@ const App: React.FC = () => {
       setIsLoadingData(false);
       toast.error('Erro ao popular banco de dados.');
     }
-  };
-
-  const handleUpdateClient = (updatedClient: ClientData) => {
-    // A atualização real no DB deve ser feita nos componentes filhos (ClientPortal) 
-    // ou implementada aqui. Por enquanto, atualizamos o estado local para refletir na UI.
-    setClients(prev => prev.map(c => c.id === updatedClient.id ? updatedClient : c));
-    setSelectedClient(updatedClient);
   };
 
   // Admin clica em "Acessar Portal"
@@ -272,9 +294,11 @@ const App: React.FC = () => {
     return (
       <AdminDashboard
         clients={clients}
-        onSelectClient={setSelectedClient}
+        onSelectClient={(client) => setSelectedClient(client)}
         onSwitchToClientView={switchToClientView}
         onAddClient={createNewClient}
+        onUpdateClient={handleUpdateClient}
+        onDeleteClient={handleDeleteClient}
         onLogout={handleLogout}
         onSeedDatabase={handleSeedDatabase}
       />
