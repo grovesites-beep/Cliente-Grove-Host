@@ -3,7 +3,7 @@ import { ClientData, Product, Contract, PasswordVaultItem } from '../types';
 import {
     X, User, Mail, Phone, MapPin, Globe, Calendar, Lock, FileText,
     Package, CreditCard, Key, Edit, Trash2, Plus, Eye, EyeOff, Copy,
-    Check, Building2, UserCircle, StickyNote, Settings2
+    Check, Building2, UserCircle, StickyNote, Settings2, ChevronRight
 } from 'lucide-react';
 import { formatPhoneBR, formatDateBR, formatCurrencyBR, formatCEP } from '../utils/formatters';
 
@@ -41,41 +41,28 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({ client, onClose, o
     };
 
     return (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-[999] p-4 animate-fadeIn">
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col animate-slideIn">
+        <div className="fixed inset-0 z-[999] flex justify-end">
+            {/* Backdrop */}
+            <div
+                className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-fadeIn"
+                onClick={onClose}
+            />
 
-                {/* Header */}
-                <div className="flex items-center justify-between px-8 py-6 border-b border-slate-200">
-                    <div className="flex items-center gap-4">
-                        {/* Avatar */}
-                        <div className="relative">
-                            {client.avatar ? (
-                                <img src={client.avatar} alt={client.name} className="w-16 h-16 rounded-full object-cover border-4 border-white shadow-lg" />
-                            ) : (
-                                <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xl border-4 border-white shadow-lg">
-                                    {client.name.charAt(0)}{client.company.charAt(0)}
-                                </div>
-                            )}
-                            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
-                        </div>
+            {/* Offcanvas Panel */}
+            <div className="relative bg-white w-full max-w-2xl h-full shadow-2xl flex flex-col animate-slideIn">
 
-                        {/* Client Info */}
-                        <div>
-                            <h2 className="text-2xl font-bold text-slate-800">{client.name}</h2>
-                            <p className="text-slate-500 flex items-center gap-2 mt-1">
-                                <Building2 size={14} />
-                                {client.company}
-                            </p>
-                        </div>
-                    </div>
-
+                {/* Top Label & Actions */}
+                <div className="flex items-center justify-between px-10 py-6 border-b border-slate-100 bg-slate-50/30">
                     <div className="flex items-center gap-3">
+                        <UserCircle size={20} className="text-slate-400" />
+                        <h2 className="text-sm font-bold text-slate-900 uppercase tracking-widest">Painel do Cliente</h2>
+                    </div>
+                    <div className="flex items-center gap-4">
                         <button
-                            onClick={() => setIsEditing(!isEditing)}
-                            className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl font-bold hover:bg-indigo-100 transition-colors flex items-center gap-2"
+                            onClick={onClose}
+                            className="bg-white px-5 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all flex items-center gap-2 shadow-sm"
                         >
-                            <Edit size={16} />
-                            {isEditing ? 'Cancelar' : 'Editar'}
+                            Ver todos os detalhes <ChevronRight size={14} />
                         </button>
                         <button
                             onClick={onClose}
@@ -86,56 +73,100 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({ client, onClose, o
                     </div>
                 </div>
 
-                {/* Tabs */}
-                <div className="flex gap-2 px-8 py-4 border-b border-slate-200 overflow-x-auto">
-                    <button
-                        onClick={() => setActiveTab('info')}
-                        className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors whitespace-nowrap ${activeTab === 'info' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-                            }`}
-                    >
-                        <User size={16} className="inline mr-2" />
-                        Informações Gerais
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('products')}
-                        className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors whitespace-nowrap ${activeTab === 'products' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-                            }`}
-                    >
-                        <Package size={16} className="inline mr-2" />
-                        Produtos ({client.products?.length || 0})
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('contracts')}
-                        className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors whitespace-nowrap ${activeTab === 'contracts' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-                            }`}
-                    >
-                        <FileText size={16} className="inline mr-2" />
-                        Contratos ({client.contracts?.length || 0})
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('vault')}
-                        className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors whitespace-nowrap ${activeTab === 'vault' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-                            }`}
-                    >
-                        <Key size={16} className="inline mr-2" />
-                        Cofre de Senhas ({client.passwordVault?.length || 0})
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('integrations')}
-                        className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors whitespace-nowrap ${activeTab === 'integrations' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-                            }`}
-                    >
-                        <Settings2 size={16} className="inline mr-2" />
-                        Integrações ({client.integrations?.length || 0})
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('notes')}
-                        className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors whitespace-nowrap ${activeTab === 'notes' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100'
-                            }`}
-                    >
-                        <StickyNote size={16} className="inline mr-2" />
-                        Notas
-                    </button>
+                {/* Profile Section */}
+                <div className="px-10 py-10">
+                    <div className="flex items-start justify-between mb-10">
+                        <div className="flex items-center gap-6">
+                            {/* Avatar */}
+                            <div className="relative">
+                                {client.avatar ? (
+                                    <img src={client.avatar} alt={client.name} className="w-20 h-20 rounded-3xl object-cover border-4 border-white shadow-xl shadow-slate-200" />
+                                ) : (
+                                    <div className="w-20 h-20 rounded-3xl bg-indigo-600 flex items-center justify-center text-white font-bold text-3xl shadow-xl shadow-indigo-100">
+                                        {client.name.charAt(0)}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="space-y-1">
+                                <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">{client.name}</h1>
+                                <div className="flex items-center gap-4 text-slate-500 text-sm">
+                                    <span className="flex items-center gap-1.5"><Mail size={14} className="text-slate-400" /> {client.email}</span>
+                                    <span className="w-1.5 h-1.5 bg-slate-200 rounded-full"></span>
+                                    <span className="flex items-center gap-1.5"><Phone size={14} className="text-slate-400" /> {formatPhoneBR(client.phone || '')}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <button className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 transition-all"><Plus size={18} /></button>
+                            <button className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 transition-all"><Mail size={18} /></button>
+                            <button className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 transition-all"><Phone size={18} /></button>
+                            <button className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 transition-all"><Settings2 size={18} /></button>
+                        </div>
+                    </div>
+
+                    {/* Info Grid */}
+                    <div className="grid grid-cols-4 gap-px bg-slate-100 border border-slate-100 rounded-2xl overflow-hidden mb-10">
+                        <div className="bg-white p-6">
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-2 tracking-wide">Responsável</label>
+                            <p className="text-sm font-bold text-slate-800">{client.responsiblePerson || 'Não definido'}</p>
+                        </div>
+                        <div className="bg-white p-6">
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-2 tracking-wide">Empresa</label>
+                            <p className="text-sm font-bold text-slate-800">{client.company}</p>
+                        </div>
+                        <div className="bg-white p-6">
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-2 tracking-wide">Tipo de Site</label>
+                            <p className="text-sm font-bold text-slate-800">{client.siteType}</p>
+                        </div>
+                        <div className="bg-white p-6">
+                            <label className="block text-xs font-bold text-slate-400 uppercase mb-2 tracking-wide">Investimento Mensal</label>
+                            <p className="text-sm font-bold text-slate-800">{formatCurrencyBR(2500)}</p>
+                        </div>
+                    </div>
+
+                    {/* Status Flow Indicator */}
+                    <div className="flex gap-1.5 mb-10">
+                        {['Nova', 'Ativa', 'Em Manutenção', 'Inativa'].map((status) => {
+                            const isCurrent = (status === 'Ativa' && !client.maintenanceMode) || (status === 'Em Manutenção' && client.maintenanceMode);
+                            return (
+                                <div
+                                    key={status}
+                                    className={`
+                                        flex-1 py-3 px-4 rounded-xl text-[10px] font-bold uppercase tracking-widest text-center transition-all
+                                        ${isCurrent ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-100 translate-y-[-2px]' : 'bg-slate-50 text-slate-400 border border-slate-100'}
+                                    `}
+                                >
+                                    {status}
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Navigation Tabs (Vertical/Compact style for offcanvas) */}
+                    <div className="flex gap-4 border-b border-slate-100 pb-1 overflow-x-auto no-scrollbar">
+                        {[
+                            { id: 'info', name: 'Informações', icon: User },
+                            { id: 'products', name: 'Produtos', icon: Package },
+                            { id: 'contracts', name: 'Contratos', icon: FileText },
+                            { id: 'vault', name: 'Cofre', icon: Key },
+                            { id: 'integrations', name: 'Integrações', icon: Settings2 },
+                            { id: 'notes', name: 'Notas', icon: StickyNote },
+                        ].map((tab) => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id as any)}
+                                className={`
+                                    px-4 py-3 text-sm font-bold whitespace-nowrap border-b-2 transition-all flex items-center gap-2
+                                    ${activeTab === tab.id ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'}
+                                `}
+                            >
+                                <tab.icon size={16} />
+                                {tab.name}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 {/* Content */}
