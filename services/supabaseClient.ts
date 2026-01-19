@@ -222,7 +222,55 @@ export const createClientInDb = async (client: Omit<ClientData, 'id' | 'visits' 
     ];
     await supabase.from('integrations').insert(defaultIntegrations);
 
+    return data.id;
+};
+
+/**
+ * Update an existing client in Supabase
+ */
+export const updateClientInDb = async (clientId: string, updates: Partial<ClientData>) => {
+    const dbUpdates: any = {};
+
+    if (updates.name) dbUpdates.name = updates.name;
+    if (updates.company) dbUpdates.company = updates.company;
+    if (updates.email) dbUpdates.email = updates.email;
+    if (updates.siteUrl) dbUpdates.site_url = updates.siteUrl;
+    if (updates.siteType) dbUpdates.site_type = updates.siteType;
+    if (updates.hostingExpiry) dbUpdates.hosting_expiry = updates.hostingExpiry;
+    if (updates.maintenanceMode !== undefined) dbUpdates.maintenance_mode = updates.maintenanceMode;
+
+    const { data, error } = await supabase
+        .from('clients')
+        .update(dbUpdates)
+        .eq('id', clientId)
+        .select()
+        .single();
+
+    if (error) throw error;
     return data;
+};
+
+/**
+ * Delete a client and all related data from Supabase
+ */
+export const deleteClientFromDb = async (clientId: string) => {
+    // Delete in order: posts, integrations, analytics, then client
+    // (Assuming CASCADE is not set up, we delete manually)
+
+    // 1. Delete posts
+    await supabase.from('posts').delete().eq('client_id', clientId);
+
+    // 2. Delete integrations
+    await supabase.from('integrations').delete().eq('client_id', clientId);
+
+    // 3. Delete analytics
+    await supabase.from('client_analytics').delete().eq('client_id', clientId);
+
+    // 4. Delete client
+    const { error } = await supabase.from('clients').delete().eq('id', clientId);
+
+    if (error) throw error;
+    return true;
 };
 
 export const updateClientPost = async (clientId: string, post: BlogPost) => {

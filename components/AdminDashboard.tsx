@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ClientData, SiteType } from '../types';
 import {
   Users, LayoutDashboard, Settings, LogOut, Search, Bell,
-  Menu, ChevronRight, DollarSign, Briefcase, Plus, MoreVertical, ExternalLink, X, Save, FileText, ArrowUpRight, Database, Star, Mail, Phone, Package
+  Menu, ChevronRight, DollarSign, Briefcase, Plus, MoreVertical, ExternalLink, X, Save, FileText, ArrowUpRight, Database, Star, Mail, Phone, Package, Edit2, Trash2
 } from 'lucide-react';
 import { formatDateBR, formatDateTimeBR, formatPhoneBR, formatCurrencyBR, getRelativeTimeBR } from '../utils/formatters';
 
@@ -16,6 +16,8 @@ interface AdminDashboardProps {
   onSelectClient: (client: ClientData) => void;
   onSwitchToClientView: (client: ClientData) => void;
   onAddClient: (client: Omit<ClientData, 'id'>) => void;
+  onUpdateClient: (clientId: string, updates: Partial<ClientData>) => void;
+  onDeleteClient: (clientId: string) => void;
   onLogout: () => void;
   onSeedDatabase: () => void;
 }
