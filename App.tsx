@@ -8,6 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 import { fetchClients, createClientInDb, updateClientInDb, deleteClientFromDb, fetchClientByEmail, seedDatabase, supabase, getUserRole, signOut } from './services/supabaseClient';
 import { useToast } from './hooks/useToast';
 import { ToastProvider, useToastContext } from './contexts/ToastContext';
+import { notificationService } from './services/notificationService';
 
 type AuthState = 'unauthenticated' | 'authenticated';
 
@@ -150,10 +151,19 @@ const App: React.FC = () => {
   const createNewClient = async (clientData: Omit<ClientData, 'id'>) => {
     try {
       const newClientId = await createClientInDb(clientData);
+
+      // Enviar notificação de boas-vindas
+      try {
+        await notificationService.sendWelcomeMessage(clientData.name, clientData.email, clientData.phone);
+      } catch (notifError) {
+        console.error('Erro ao enviar notificação:', notifError);
+        // Não falha a criação do cliente se a notificação falhar
+      }
+
       // Recarrega a lista de clientes
       const updatedClients = await fetchClients();
       setClients(updatedClients);
-      toast.success('Cliente criado com sucesso!');
+      toast.success('Cliente criado e notificado com sucesso!');
     } catch (error) {
       console.error('Erro ao criar cliente:', error);
       toast.error('Erro ao criar cliente. Tente novamente.');

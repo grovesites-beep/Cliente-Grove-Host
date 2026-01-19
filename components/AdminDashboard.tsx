@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ClientData, SiteType } from '../types';
 import {
   Users, LayoutDashboard, Settings, LogOut, Search, Bell,
-  Menu, ChevronRight, DollarSign, Briefcase, Plus, MoreVertical, ExternalLink, X, Save, FileText, ArrowUpRight, Database, Star, Mail, Phone, Package, Edit2, Trash2
+  Menu, ChevronRight, DollarSign, Briefcase, Plus, MoreVertical, ExternalLink, X, Save, FileText, ArrowUpRight, Database, Star, Mail, Phone, Package, Edit2, Trash2, ShieldCheck
 } from 'lucide-react';
 import { formatDateBR, formatDateTimeBR, formatPhoneBR, formatCurrencyBR, getRelativeTimeBR } from '../utils/formatters';
 
@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import { ClientDetails } from './ClientDetails';
 import { ConfirmationModal } from './ConfirmationModal';
+import { useToastContext } from '../contexts/ToastContext';
 
 interface AdminDashboardProps {
   clients: ClientData[];
@@ -27,18 +28,45 @@ interface AdminDashboardProps {
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelectClient, onSwitchToClientView, onAddClient, onUpdateClient, onDeleteClient, onLogout, onSeedDatabase }) => {
   // Load saved tab from localStorage
-  const [activeTab, setActiveTab] = useState<'overview' | 'clients' | 'finance' | 'settings'>(() => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'clients' | 'finance' | 'products' | 'contracts' | 'settings'>(() => {
     const saved = localStorage.getItem('adminActiveTab');
-    return (saved as 'overview' | 'clients' | 'finance' | 'settings') || 'overview';
+    return (saved as 'overview' | 'clients' | 'finance' | 'products' | 'contracts' | 'settings') || 'overview';
   });
+  const [settingsSubTab, setSettingsSubTab] = useState<'general' | 'security' | 'notifications' | 'integrations' | 'branding'>('general');
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
 
-  // New Client Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Settings State
+  const [settings, setSettings] = useState(() => {
+    const saved = localStorage.getItem('nexusHub_settings');
+    return saved ? JSON.parse(saved) : {
+      agencyName: 'NexusHub Digital',
+      adminEmail: 'admin@nexushub.com',
+      whiteLabel: true,
+      autoRegister: false,
+      twoFactor: false,
+      auditLogs: true,
+      resendApiKey: '',
+      resendFromEmail: 'notifications@nexushub.digital',
+      resendFromName: 'NexusHub Support',
+      evolutionApiUrl: '',
+      evolutionApiKey: '',
+      evolutionInstance: 'NexusHub_Principal'
+    };
+  });
+
+  const toast = useToastContext();
+
+  const handleSaveSettings = () => {
+    localStorage.setItem('nexusHub_settings', JSON.stringify(settings));
+    toast.success("Configurações salvas com sucesso!");
+  };
+
   const [newClient, setNewClient] = useState({
     name: '',
     company: '',
@@ -49,7 +77,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
     maintenanceMode: false
   });
 
-  // Client Details Modal State
   // Client Details Modal State
   const [selectedClientForDetails, setSelectedClientForDetails] = useState<ClientData | null>(null);
   const [isClientDetailsOpen, setIsClientDetailsOpen] = useState(false);
@@ -133,29 +160,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
 
   // Mock data for Admin Charts
   const revenueData = [
-    { month: 'Jan', revenue: 4500 },
-    { month: 'Fev', revenue: 5200 },
-    { month: 'Mar', revenue: 4800 },
-    { month: 'Abr', revenue: 6100 },
-    { month: 'Mai', revenue: 5900 },
-    { month: 'Jun', revenue: 7500 },
+    { month: 'Jan', revenue: 12000 },
+    { month: 'Fev', revenue: 13500 },
+    { month: 'Mar', revenue: 15000 },
+    { month: 'Abr', revenue: 16200 },
+    { month: 'Mai', revenue: 18000 },
+    { month: 'Jun', revenue: 21000 },
+    { month: 'Jul', revenue: 23500 },
+    { month: 'Ago', revenue: 25000 },
+    { month: 'Set', revenue: 28000 },
+    { month: 'Out', revenue: 31000 },
+    { month: 'Nov', revenue: 33500 },
+    { month: 'Dez', revenue: 36000 },
   ];
 
   // --- Components ---
-
-  const SidebarItem = ({ id, label, icon: Icon }: any) => (
-    <button
-      onClick={() => { setActiveTab(id); setSidebarOpen(false); }}
-      className={`w-full flex items-center gap-4 px-4 py-4 rounded-xl transition-all duration-200 group ${activeTab === id
-        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
-        : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'
-        }`}
-    >
-      <Icon size={20} className={activeTab === id ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'} />
-      <span className="font-semibold text-sm">{label}</span>
-      {activeTab === id && <ChevronRight size={16} className="ml-auto opacity-50" />}
-    </button>
-  );
 
   const StatCard = ({ title, value, subtext, icon: Icon, colorClass }: any) => (
     <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-start justify-between group hover:shadow-md transition-shadow">
@@ -228,11 +247,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
   const renderOverview = () => {
     // Calculate real data from clients
     const activeClients = clients.filter(c => !c.maintenanceMode).length;
-    const newClientsThisMonth = clients.filter(c => {
-      // Assuming clients created in the last 30 days are "new"
-      // Since we don't have created_at in the type, we'll use a simple heuristic
-      return true; // For now, showing all as potential new
-    }).length;
+    const newClientsThisMonth = clients.length; // Simplified
 
     // Calculate projected revenue based on client types
     const revenueByType = {
@@ -263,7 +278,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
       { name: 'E-commerce', value: serviceDistribution[SiteType.ECOMMERCE] },
       { name: 'Institucional', value: serviceDistribution[SiteType.INSTITUTIONAL] },
       { name: 'Landing Page', value: serviceDistribution[SiteType.LANDING_PAGE] },
-    ].filter(item => item.value > 0); // Only show services with clients
+    ].filter(item => item.value > 0);
 
     const COLORS = ['#4F46E5', '#10B981', '#F59E0B'];
 
@@ -440,11 +455,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
     };
 
     const getStatusBadge = (client: ClientData) => {
-      // Logic based on maintenance mode or other criteria
       if (client.maintenanceMode) {
         return <span className="px-3 py-1 bg-amber-50 text-amber-600 text-xs font-bold rounded-full border border-amber-200">• Manutenção</span>;
       }
-      if (client.posts.length > 0) {
+      if (client.posts?.length > 0) {
         return <span className="px-3 py-1 bg-green-50 text-green-600 text-xs font-bold rounded-full border border-green-200">• Ativo</span>;
       }
       return <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full border border-blue-200">• Novo</span>;
@@ -452,7 +466,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
 
     return (
       <div className="space-y-6 animate-fadeIn">
-        {/* Header */}
         <div className="flex justify-between items-center">
           <div>
             <h2 className="text-3xl font-bold text-slate-800 tracking-tight">{clientsFiltered.length} Clientes</h2>
@@ -466,10 +479,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
           </button>
         </div>
 
-        {/* Filters and Search */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            {/* Search */}
             <div className="relative flex-1 w-full md:max-w-md">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
               <input
@@ -480,8 +491,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
                 className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               />
             </div>
-
-            {/* Filter Buttons */}
             <div className="flex items-center gap-2">
               <button className="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
                 <MoreVertical size={18} />
@@ -490,7 +499,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
           </div>
         </div>
 
-        {/* Table */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full" style={{ tableLayout: 'fixed' }}>
@@ -498,38 +506,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
                 <tr className="border-b border-slate-200 bg-slate-50">
                   <th style={{ width: columnWidths.cliente }} className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider relative group border-r border-slate-100 last:border-r-0">
                     Cliente
-                    <div
-                      onMouseDown={startResizing('cliente')}
-                      className={`absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-indigo-500 transition-colors ${resizing === 'cliente' ? 'bg-indigo-600 w-0.5' : 'bg-transparent'}`}
-                    />
+                    <div onMouseDown={startResizing('cliente')} className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-indigo-500 transition-colors" />
                   </th>
                   <th style={{ width: columnWidths.contato }} className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider relative group border-r border-slate-100 last:border-r-0">
                     Contato
-                    <div
-                      onMouseDown={startResizing('contato')}
-                      className={`absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-indigo-500 transition-colors ${resizing === 'contato' ? 'bg-indigo-600 w-0.5' : 'bg-transparent'}`}
-                    />
+                    <div onMouseDown={startResizing('contato')} className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-indigo-500 transition-colors" />
                   </th>
                   <th style={{ width: columnWidths.empresa }} className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider relative group border-r border-slate-100 last:border-r-0">
                     Empresa
-                    <div
-                      onMouseDown={startResizing('empresa')}
-                      className={`absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-indigo-500 transition-colors ${resizing === 'empresa' ? 'bg-indigo-600 w-0.5' : 'bg-transparent'}`}
-                    />
+                    <div onMouseDown={startResizing('empresa')} className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-indigo-500 transition-colors" />
                   </th>
                   <th style={{ width: columnWidths.status }} className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider relative group border-r border-slate-100 last:border-r-0">
                     Status
-                    <div
-                      onMouseDown={startResizing('status')}
-                      className={`absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-indigo-500 transition-colors ${resizing === 'status' ? 'bg-indigo-600 w-0.5' : 'bg-transparent'}`}
-                    />
+                    <div onMouseDown={startResizing('status')} className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-indigo-500 transition-colors" />
                   </th>
                   <th style={{ width: columnWidths.site }} className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider relative group border-r border-slate-100 last:border-r-0">
                     Site
-                    <div
-                      onMouseDown={startResizing('site')}
-                      className={`absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-indigo-500 transition-colors ${resizing === 'site' ? 'bg-indigo-600 w-0.5' : 'bg-transparent'}`}
-                    />
+                    <div onMouseDown={startResizing('site')} className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-indigo-500 transition-colors" />
                   </th>
                   <th style={{ width: columnWidths.acoes }} className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
                     Ações
@@ -546,7 +539,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
                       setIsClientDetailsOpen(true);
                     }}
                   >
-                    {/* Cliente */}
                     <td className="px-6 py-4 truncate">
                       <div className="flex items-center gap-3 overflow-hidden">
                         <div className={`shrink-0 w-10 h-10 rounded-full ${getAvatarColor(client.name)} flex items-center justify-center text-white font-bold text-sm shadow-sm`}>
@@ -558,8 +550,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
                         </div>
                       </div>
                     </td>
-
-                    {/* Contato */}
                     <td className="px-6 py-4 truncate">
                       <div className="space-y-1 overflow-hidden">
                         <div className="flex items-center gap-2 text-sm text-slate-600 truncate">
@@ -568,25 +558,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
                         </div>
                         <div className="flex items-center gap-2 text-sm text-slate-600 truncate">
                           <Phone size={14} className="shrink-0 text-slate-400" />
-                          <span className="truncate">{formatPhoneBR(client.phone || '11999999999')}</span>
+                          <span className="truncate">{formatPhoneBR(client.phone || '')}</span>
                         </div>
                       </div>
                     </td>
-
-                    {/* Empresa */}
                     <td className="px-6 py-4 truncate">
                       <div className="flex items-center gap-2 overflow-hidden">
                         <Briefcase size={16} className="shrink-0 text-slate-400" />
                         <span className="font-medium text-slate-700 truncate">{client.company}</span>
                       </div>
                     </td>
-
-                    {/* Status */}
                     <td className="px-6 py-4">
                       {getStatusBadge(client)}
                     </td>
-
-                    {/* Site */}
                     <td className="px-6 py-4 truncate">
                       <a
                         href={`https://${client.siteUrl}`}
@@ -599,18 +583,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
                         <ExternalLink size={14} className="shrink-0" />
                       </a>
                     </td>
-
-                    {/* Ações */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            // TODO: Abrir modal de edição
-                            console.log('Edit client:', client.id);
+                            setSelectedClientForDetails(client);
+                            setIsClientDetailsOpen(true);
                           }}
                           className="p-2 hover:bg-indigo-50 text-indigo-600 rounded-lg transition-colors"
-                          title="Editar cliente"
                         >
                           <Edit2 size={16} />
                         </button>
@@ -621,12 +602,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
                               isOpen: true,
                               type: 'danger',
                               title: 'Excluir Cliente',
-                              message: `Tem certeza que deseja excluir ${client.name}? Esta ação é irreversível e removerá todos os dados associados.`,
+                              message: `Tem certeza que deseja excluir ${client.name}?`,
                               onConfirm: () => onDeleteClient(client.id)
                             });
                           }}
                           className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
-                          title="Excluir cliente"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -637,44 +617,469 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+    );
+  };
 
-          {/* Empty State */}
-          {clientsFiltered.length === 0 && (
-            <div className="text-center py-16">
-              <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Users size={32} className="text-slate-400" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-800 mb-2">Nenhum cliente encontrado</h3>
-              <p className="text-slate-500 mb-6">Comece adicionando seu primeiro cliente ou ajuste os filtros</p>
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors"
-              >
-                Adicionar Cliente
-              </button>
-            </div>
-          )}
+  const renderFinance = () => {
+    const totalMRR = clients.reduce((acc, c) => acc + (c.products?.reduce((pAcc, p) => pAcc + (p.active ? p.price : 0), 0) || 1500), 0);
+    const growth = 12.5;
+
+    return (
+      <div className="space-y-6 animate-fadeIn">
+        <div className="flex justify-between items-center text-slate-800">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Painel Financeiro</h2>
+            <p className="text-slate-500 mt-1">Acompanhe a saúde financeira da sua agência</p>
+          </div>
+          <button className="flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-all shadow-sm">
+            <Save size={18} /> Exportar Relatório
+          </button>
         </div>
 
-        {/* Pagination */}
-        {clientsFiltered.length > 0 && (
-          <div className="flex items-center justify-between px-6 py-4 bg-white rounded-2xl border border-slate-200">
-            <p className="text-sm text-slate-600">
-              Mostrando <span className="font-bold">{clientsFiltered.length}</span> de <span className="font-bold">{clients.length}</span> resultados
-            </p>
-            <div className="flex items-center gap-2">
-              <button className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">
-                Anterior
-              </button>
-              <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold">
-                1
-              </button>
-              <button className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">
-                Próximo
-              </button>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <StatCard title="MRR Atual" value={formatCurrencyBR(totalMRR)} subtext="+R$ 1.250 este mês" icon={DollarSign} colorClass="bg-indigo-600" />
+          <StatCard title="Crescimento" value={`${growth}%`} subtext="Em relação ao mês anterior" icon={ArrowUpRight} colorClass="bg-emerald-500" />
+          <StatCard title="Churn Rate" value="2.4%" subtext="1 cliente perdido" icon={Users} colorClass="bg-rose-500" />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white p-6 rounded-[30px] border border-slate-100 shadow-sm h-96">
+            <h3 className="text-lg font-bold mb-6 text-slate-800">Projeção de Receita (12 meses)</h3>
+            <div className="h-72">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={revenueData}>
+                  <defs>
+                    <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.1} />
+                      <stop offset="95%" stopColor="#4F46E5" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                  <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
+                  <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                  <Area type="monotone" dataKey="revenue" stroke="#4F46E5" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           </div>
-        )}
+
+          <div className="bg-white p-6 rounded-[30px] border border-slate-100 shadow-sm">
+            <h3 className="text-lg font-bold mb-6 text-slate-800">Últimas Transações</h3>
+            <div className="space-y-4">
+              {clients.slice(0, 5).map((client) => (
+                <div key={client.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
+                      {client.name.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-slate-800">{client.company}</p>
+                      <p className="text-xs text-slate-400">Mensalidade • 15/05/2026</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-emerald-600">+{formatCurrencyBR(1500)}</p>
+                    <span className="text-[10px] px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-bold">Pago</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderProducts = () => {
+    const products = [
+      { id: '1', name: 'Manutenção Mensal', price: 500, users: 12, category: 'Serviço' },
+      { id: '2', name: 'Hospedagem Premium', price: 150, users: 45, category: 'Infra' },
+      { id: '3', name: 'Gestão de Conteúdo', price: 1200, users: 8, category: 'Marketing' },
+      { id: '4', name: 'Suporte 24/7', price: 300, users: 15, category: 'Serviço' },
+    ];
+
+    return (
+      <div className="space-y-6 animate-fadeIn">
+        <div className="flex justify-between items-center text-slate-800">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Catálogo de Produtos</h2>
+            <p className="text-slate-500 mt-1">Gerencie os planos e serviços oferecidos pela agência</p>
+          </div>
+          <button className="flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all">
+            <Plus size={20} /> Novo Produto
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {products.map(product => (
+            <div key={product.id} className="bg-white p-6 rounded-[30px] border border-slate-100 shadow-sm hover:shadow-md transition-all group">
+              <div className="flex justify-between items-start mb-4">
+                <div className="p-3 bg-indigo-50 rounded-2xl text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                  <Package size={24} />
+                </div>
+                <span className="text-xs px-2 py-1 bg-slate-100 text-slate-400 rounded-lg font-bold uppercase">{product.category}</span>
+              </div>
+              <h3 className="text-lg font-bold text-slate-800 mb-1">{product.name}</h3>
+              <p className="text-2xl font-black text-indigo-600 mb-4">{formatCurrencyBR(product.price)}<span className="text-xs text-slate-400 font-normal">/mês</span></p>
+              <div className="flex items-center gap-2 text-sm text-slate-500">
+                <Users size={16} />
+                <span>{product.users} clientes ativos</span>
+              </div>
+              <div className="mt-6 flex gap-2">
+                <button className="flex-1 py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg text-sm font-bold transition-colors">Editar</button>
+                <button className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"><Trash2 size={18} /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderContracts = () => {
+    return (
+      <div className="space-y-6 animate-fadeIn">
+        <div className="flex justify-between items-center text-slate-800">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Gestão de Contratos</h2>
+            <p className="text-slate-500 mt-1">Controle legal e vigência de parcerias</p>
+          </div>
+          <button className="flex items-center gap-2 px-5 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all">
+            <Plus size={20} /> Novo Contrato
+          </button>
+        </div>
+
+        <div className="bg-white rounded-[30px] border border-slate-200 shadow-sm overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-slate-50 border-b border-slate-100">
+              <tr>
+                <th className="px-8 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Contrato / Cliente</th>
+                <th className="px-8 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Período</th>
+                <th className="px-8 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Valor Total</th>
+                <th className="px-8 py-5 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                <th className="px-8 py-5 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {clients.slice(0, 6).map((client) => (
+                <tr key={client.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-8 py-5">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-indigo-50 rounded-lg text-indigo-600">
+                        <FileText size={18} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-slate-800">Contrato de Prestação de Serviços</p>
+                        <p className="text-xs text-slate-400">{client.company}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-8 py-5 text-sm text-slate-600">
+                    Jan 2026 - Jan 2027
+                  </td>
+                  <td className="px-8 py-5 text-sm font-bold text-slate-800">
+                    {formatCurrencyBR(18000)}
+                  </td>
+                  <td className="px-8 py-5">
+                    <span className="px-3 py-1 bg-emerald-50 text-emerald-600 text-[10px] font-bold rounded-full border border-emerald-100 uppercase tracking-wider">Vigente</span>
+                  </td>
+                  <td className="px-8 py-5 text-center">
+                    <button className="p-2 hover:bg-white rounded-lg text-slate-400 hover:text-indigo-600 transition-all shadow-sm"><ExternalLink size={18} /></button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  const renderSettings = () => {
+    return (
+      <div className="space-y-6 animate-fadeIn">
+        <div className="flex justify-between items-center mb-8 text-slate-800">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Configurações de Administrador</h2>
+            <p className="text-slate-500 mt-1">Ajuste os parâmetros globais do sistema NexusHub</p>
+          </div>
+          <button
+            onClick={handleSaveSettings}
+            className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-200 transition-all hover:scale-105 active:scale-95"
+          >
+            <Save size={20} /> Salvar Tudo
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-3 space-y-2">
+            {[
+              { id: 'general', name: 'Geral', icon: Settings },
+              { id: 'security', name: 'Segurança', icon: ShieldCheck },
+              { id: 'notifications', name: 'Notificações', icon: Bell },
+              { id: 'integrations', name: 'APIs & Integrações', icon: Database },
+              { id: 'branding', name: 'Identidade Visual', icon: LayoutDashboard },
+            ].map(item => (
+              <button
+                key={item.id}
+                onClick={() => setSettingsSubTab(item.id as any)}
+                className={`w-full flex items-center gap-3 px-5 py-4 rounded-2xl font-bold text-sm transition-all ${settingsSubTab === item.id ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-slate-500 hover:bg-slate-100'}`}
+              >
+                <item.icon size={20} />
+                {item.name}
+              </button>
+            ))}
+          </div>
+
+          <div className="lg:col-span-9 bg-white rounded-[40px] border border-slate-100 shadow-sm p-10 space-y-10">
+            {settingsSubTab === 'general' && (
+              <>
+                <section className="space-y-6">
+                  <h3 className="text-xl font-bold text-slate-800 flex items-center gap-3">
+                    <span className="w-1.5 h-6 bg-indigo-600 rounded-full"></span>
+                    Informações da Agência
+                  </h3>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Nome da Agência</label>
+                      <input
+                        type="text"
+                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                        value={settings.agencyName}
+                        onChange={e => setSettings({ ...settings, agencyName: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Email Principal (Admin)</label>
+                      <input
+                        type="email"
+                        className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                        value={settings.adminEmail}
+                        onChange={e => setSettings({ ...settings, adminEmail: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                <section className="space-y-6">
+                  <h3 className="text-xl font-bold text-slate-800 flex items-center gap-3">
+                    <span className="w-1.5 h-6 bg-indigo-600 rounded-full"></span>
+                    Personalização do Portal do Cliente
+                  </h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-6 bg-slate-50 rounded-[30px] border border-slate-100 group hover:border-indigo-200 transition-all">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-white rounded-2xl text-yellow-500 shadow-sm"><Star size={24} /></div>
+                        <div>
+                          <p className="font-bold text-slate-800">Modo White Label</p>
+                          <p className="text-xs text-slate-500">Remova a marca NexusHub de todos os portais de clientes</p>
+                        </div>
+                      </div>
+                      <div
+                        onClick={() => setSettings({ ...settings, whiteLabel: !settings.whiteLabel })}
+                        className={`w-14 h-8 ${settings.whiteLabel ? 'bg-indigo-600' : 'bg-slate-300'} rounded-full flex items-center px-1 cursor-pointer transition-colors`}
+                      >
+                        <div className={`w-6 h-6 bg-white rounded-full shadow-md transition-transform ${settings.whiteLabel ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-6 bg-slate-50 rounded-[30px] border border-slate-100">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-white rounded-2xl text-indigo-500 shadow-sm"><LayoutDashboard size={24} /></div>
+                        <div>
+                          <p className="font-bold text-slate-800">Auto-registro de Clientes</p>
+                          <p className="text-xs text-slate-500">Permite que novos clientes criem contas sozinhos</p>
+                        </div>
+                      </div>
+                      <div
+                        onClick={() => setSettings({ ...settings, autoRegister: !settings.autoRegister })}
+                        className={`w-14 h-8 ${settings.autoRegister ? 'bg-indigo-600' : 'bg-slate-300'} rounded-full flex items-center px-1 cursor-pointer transition-colors`}
+                      >
+                        <div className={`w-6 h-6 bg-white rounded-full shadow-md transition-transform ${settings.autoRegister ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </>
+            )}
+
+            {settingsSubTab === 'security' && (
+              <section className="space-y-6">
+                <h3 className="text-xl font-bold text-slate-800 flex items-center gap-3">
+                  <span className="w-1.5 h-6 bg-indigo-600 rounded-full"></span>
+                  Segurança & Acesso
+                </h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-6 bg-slate-50 rounded-[30px] border border-slate-100 group hover:border-indigo-200 transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-white rounded-2xl text-emerald-500 shadow-sm"><ShieldCheck size={24} /></div>
+                      <div>
+                        <p className="font-bold text-slate-800">Autenticação em Dois Fatores (2FA)</p>
+                        <p className="text-xs text-slate-500">Exige verificação extra para todos os usuários admin</p>
+                      </div>
+                    </div>
+                    <div className="w-14 h-8 bg-slate-300 rounded-full flex items-center px-1 cursor-pointer">
+                      <div
+                        onClick={() => setSettings({ ...settings, twoFactor: !settings.twoFactor })}
+                        className={`w-14 h-8 ${settings.twoFactor ? 'bg-indigo-600' : 'bg-slate-300'} rounded-full flex items-center px-1 cursor-pointer transition-colors`}
+                      >
+                        <div className={`w-6 h-6 bg-white rounded-full shadow-md transition-transform ${settings.twoFactor ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-6 bg-slate-50 rounded-[30px] border border-slate-100">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 bg-white rounded-2xl text-blue-500 shadow-sm"><Database size={24} /></div>
+                      <div>
+                        <p className="font-bold text-slate-800">Logs de Auditoria</p>
+                        <p className="text-xs text-slate-500">Rastreie todas as ações importantes realizadas no sistema</p>
+                      </div>
+                    </div>
+                    <div
+                      onClick={() => setSettings({ ...settings, auditLogs: !settings.auditLogs })}
+                      className={`w-14 h-8 ${settings.auditLogs ? 'bg-indigo-600' : 'bg-slate-300'} rounded-full flex items-center px-1 cursor-pointer transition-colors`}
+                    >
+                      <div className={`w-6 h-6 bg-white rounded-full shadow-md transition-transform ${settings.auditLogs ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {settingsSubTab === 'notifications' && (
+              <div className="space-y-10">
+                <section className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-bold text-slate-800 flex items-center gap-3">
+                      <span className="w-1.5 h-6 bg-indigo-600 rounded-full"></span>
+                      E-mail (Resend)
+                    </h3>
+                    <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded-full uppercase tracking-wider border border-emerald-200">Ativo</span>
+                  </div>
+                  <div className="bg-slate-50 p-8 rounded-[30px] border border-slate-100 space-y-6">
+                    <div className="grid grid-cols-1 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">API Key Resend</label>
+                        <div className="relative">
+                          <input
+                            type="password"
+                            className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
+                            value={settings.resendApiKey}
+                            onChange={e => setSettings({ ...settings, resendApiKey: e.target.value })}
+                            placeholder="re_xxxxxxxxxxxxxxxxxxxx"
+                          />
+                          <button className="absolute right-4 top-1/2 -translate-y-1/2 text-indigo-600 text-xs font-bold hover:underline">Verificar Conexão</button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">E-mail do Remetente</label>
+                          <input
+                            type="text"
+                            className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                            value={settings.resendFromEmail}
+                            onChange={e => setSettings({ ...settings, resendFromEmail: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Nome do Remetente</label>
+                          <input
+                            type="text"
+                            className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                            value={settings.resendFromName}
+                            onChange={e => setSettings({ ...settings, resendFromName: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-bold text-slate-800 flex items-center gap-3">
+                      <span className="w-1.5 h-6 bg-indigo-600 rounded-full"></span>
+                      WhatsApp (Evolution API)
+                    </h3>
+                    <span className="px-3 py-1 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-full uppercase tracking-wider border border-amber-200">Aguardando Conexão</span>
+                  </div>
+                  <div className="bg-slate-50 p-8 rounded-[30px] border border-slate-100 space-y-6">
+                    <div className="grid grid-cols-1 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">URL da API (Evolution)</label>
+                        <input
+                          type="text"
+                          className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                          placeholder="https://api.evolution.io"
+                          value={settings.evolutionApiUrl}
+                          onChange={e => setSettings({ ...settings, evolutionApiUrl: e.target.value })}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Global API Key</label>
+                          <input
+                            type="password"
+                            className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-mono"
+                            placeholder="apikey-xxxx"
+                            value={settings.evolutionApiKey}
+                            onChange={e => setSettings({ ...settings, evolutionApiKey: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-xs font-bold text-slate-500 uppercase tracking-widest pl-1">Instância</label>
+                          <input
+                            type="text"
+                            className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                            placeholder="NexusHub_Principal"
+                            value={settings.evolutionInstance}
+                            onChange={e => setSettings({ ...settings, evolutionInstance: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="pt-4">
+                      <button className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-slate-200 text-slate-700 rounded-2xl font-bold hover:bg-slate-50 transition-all">
+                        <ExternalLink size={18} /> Gerar QR Code para WhatsApp
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            )}
+
+            {settingsSubTab === 'integrations' && (
+              <div className="text-center py-20 bg-slate-50 rounded-[40px] border border-dashed border-slate-200">
+                <Database size={48} className="mx-auto text-slate-300 mb-4" />
+                <h4 className="text-lg font-bold text-slate-800">Explore novas conexões</h4>
+                <p className="text-slate-500">Integrações avançadas estarão disponíveis em breve.</p>
+              </div>
+            )}
+
+            {settingsSubTab === 'branding' && (
+              <div className="text-center py-20 bg-slate-50 rounded-[40px] border border-dashed border-slate-200">
+                <LayoutDashboard size={48} className="mx-auto text-slate-300 mb-4" />
+                <h4 className="text-lg font-bold text-slate-800">Identidade Visual</h4>
+                <p className="text-slate-500">Configure logos, cores e fontes customizadas.</p>
+              </div>
+            )}
+          </div>
+
+          <section className="pt-6 border-t border-slate-50">
+            <button
+              onClick={onSeedDatabase}
+              className="flex items-center gap-2 text-rose-600 font-bold hover:underline"
+              title="CUIDADO: Isso irá resetar os dados para demonstração"
+            >
+              <Database size={18} />
+              Reinicializar Banco de Dados (Demo)
+            </button>
+          </section>
+        </div>
       </div>
     );
   };
@@ -682,17 +1087,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
   return (
     <div className="flex h-screen bg-[#F3F4F6] overflow-hidden font-sans selection:bg-indigo-100 selection:text-indigo-700">
 
-      {/* Sidebar Overlay */}
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/20 z-40 lg:hidden backdrop-blur-sm" onClick={() => setSidebarOpen(false)}></div>
       )}
 
-      {/* Modern Sidebar - X Wallet Style */}
       <div
         className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-[#0F0F0F] text-white transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
           } flex flex-col`}
       >
-        {/* Logo */}
         <div className="p-6 flex items-center gap-3">
           <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center">
             <Star size={24} className="text-white" fill="white" />
@@ -700,191 +1102,83 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
           <span className="text-xl font-bold">NexusHub</span>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 px-4 space-y-1">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'overview'
-              ? 'bg-white/10 text-white'
-              : 'text-white/60 hover:bg-white/5 hover:text-white'
-              }`}
-          >
-            <LayoutDashboard size={20} />
-            <span className="font-medium">Dashboard</span>
+          <button onClick={() => setActiveTab('overview')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'overview' ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
+            <LayoutDashboard size={20} /> <span className="font-medium">Dashboard</span>
           </button>
-
-          <button
-            onClick={() => setActiveTab('clients')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'clients'
-              ? 'bg-white/10 text-white'
-              : 'text-white/60 hover:bg-white/5 hover:text-white'
-              }`}
-          >
-            <Users size={20} />
-            <span className="font-medium">Clientes</span>
-            <span className="ml-auto bg-indigo-600 text-white text-xs font-bold px-2 py-1 rounded-full">
-              {clients.length}
-            </span>
+          <button onClick={() => setActiveTab('clients')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'clients' ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
+            <Users size={20} /> <span className="font-medium">Clientes</span>
+            <span className="ml-auto bg-indigo-600 text-white text-xs font-bold px-2 py-1 rounded-full">{clients.length}</span>
           </button>
-
-          <button
-            onClick={() => setActiveTab('finance')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'finance'
-              ? 'bg-white/10 text-white'
-              : 'text-white/60 hover:bg-white/5 hover:text-white'
-              }`}
-          >
-            <DollarSign size={20} />
-            <span className="font-medium">Financeiro</span>
+          <button onClick={() => setActiveTab('finance')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'finance' ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
+            <DollarSign size={20} /> <span className="font-medium">Financeiro</span>
           </button>
-
-          <button
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/60 hover:bg-white/5 hover:text-white transition-all"
-          >
-            <Package size={20} />
-            <span className="font-medium">Produtos</span>
+          <button onClick={() => setActiveTab('products')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'products' ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
+            <Package size={20} /> <span className="font-medium">Produtos</span>
           </button>
-
-          <button
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/60 hover:bg-white/5 hover:text-white transition-all"
-          >
-            <FileText size={20} />
-            <span className="font-medium">Contratos</span>
+          <button onClick={() => setActiveTab('contracts')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'contracts' ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
+            <FileText size={20} /> <span className="font-medium">Contratos</span>
           </button>
-
-          <button
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/60 hover:bg-white/5 hover:text-white transition-all relative"
-          >
-            <Bell size={20} />
-            <span className="font-medium">Notificações</span>
-            <span className="ml-auto w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'settings'
-              ? 'bg-white/10 text-white'
-              : 'text-white/60 hover:bg-white/5 hover:text-white'
-              }`}
-          >
-            <Settings size={20} />
-            <span className="font-medium">Configurações</span>
+          <button onClick={() => setActiveTab('settings')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'settings' ? 'bg-white/10 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
+            <Settings size={20} /> <span className="font-medium">Configurações</span>
           </button>
         </nav>
 
-        {/* Promotional Card */}
         <div className="m-4 p-6 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16"></div>
-          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12"></div>
-
           <div className="relative z-10">
-            <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-4 backdrop-blur-sm">
-              <Star size={24} className="text-white" />
-            </div>
-            <h3 className="text-white font-bold text-lg mb-2">
-              Novidades!
-            </h3>
-            <p className="text-white/80 text-sm mb-4">
-              Confira as novas funcionalidades do sistema
-            </p>
-            <button className="w-full bg-white text-indigo-600 font-bold py-2 px-4 rounded-xl hover:bg-white/90 transition-colors text-sm flex items-center justify-center gap-2">
-              Ver Agora
-              <ArrowUpRight size={16} />
-            </button>
+            <h3 className="text-white font-bold text-lg mb-2 text-slate-800">Novidades!</h3>
+            <p className="text-white/80 text-sm mb-4">Confira as novas funcionalidades</p>
+            <button className="w-full bg-white text-indigo-600 font-bold py-2 px-4 rounded-xl text-sm">Ver Agora</button>
           </div>
         </div>
 
-        {/* Bottom Section */}
         <div className="p-4 border-t border-white/10 space-y-2">
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-white/60 hover:bg-white/5 hover:text-white transition-all">
-            <FileText size={20} />
-            <span className="font-medium">Ajuda</span>
-          </button>
-
           <button
             onClick={() => setConfirmModal({
               isOpen: true,
               type: 'warning',
               title: 'Sair do Sistema',
-              message: 'Tem certeza que deseja encerrar sua sessão atual?',
+              message: 'Tem certeza que deseja encerrar sua sessão?',
               onConfirm: onLogout
             })}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-all"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-all font-medium"
           >
-            <LogOut size={20} />
-            <span className="font-medium">Sair</span>
+            <LogOut size={20} /> Sair
           </button>
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-        <header className="px-8 py-6 flex justify-between items-center">
+        <header className="px-8 py-6 flex justify-between items-center bg-white/50 backdrop-blur-md">
           <div className="flex flex-col">
             <h2 className="text-2xl font-bold text-slate-800">Bem-vindo, Admin</h2>
             <p className="text-slate-400 text-sm">Gerencie sua agência com eficiência</p>
           </div>
 
           <div className="flex items-center gap-6">
-            {/* Mobile Menu Button */}
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden w-10 h-10 rounded-full bg-white border border-slate-100 flex items-center justify-center text-slate-600 hover:text-indigo-600 transition-colors shadow-sm"
-            >
-              <Menu size={20} />
-            </button>
-
-            {/* Inspiration Pill Menu */}
-            <div className="hidden md:flex bg-white p-1.5 rounded-full border border-slate-100 shadow-sm">
-              <button className="px-4 py-1.5 bg-slate-900 text-white rounded-full text-xs font-bold shadow-md">Dashboard</button>
-              <button className="px-4 py-1.5 text-slate-500 hover:bg-slate-50 rounded-full text-xs font-bold transition-colors">Alertas</button>
-              <button className="px-4 py-1.5 text-slate-500 hover:bg-slate-50 rounded-full text-xs font-bold transition-colors">Suporte</button>
-            </div>
-
-            <div className="w-px h-8 bg-slate-200 mx-2"></div>
-
-            <button className="relative w-10 h-10 rounded-full bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-colors shadow-sm">
-              <Bell size={20} />
-              <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-            </button>
-
+            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="lg:hidden w-10 h-10 rounded-full bg-white border border-slate-100 flex items-center justify-center text-slate-600 shadow-sm"><Menu size={20} /></button>
             <div className="flex items-center gap-3 pl-2 cursor-pointer hover:bg-white/50 p-2 rounded-xl transition-colors">
-              <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold border-2 border-white shadow-sm">
-                AD
-              </div>
+              <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold border-2 border-white shadow-sm">AD</div>
               <div className="hidden md:block">
                 <p className="text-sm font-bold text-slate-800">Admin User</p>
-                <p className="text-xs text-slate-400">admin@nexushub.com</p>
+                <p className="text-xs text-slate-400 text-slate-800">admin@nexushub.com</p>
               </div>
-              <ChevronRight size={16} className="text-slate-400" />
             </div>
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto px-8 pb-8">
-          {/* Dynamic Content */}
+        <main className="flex-1 overflow-y-auto px-8 pb-8 pt-6">
           {activeTab === 'overview' && renderOverview()}
           {activeTab === 'clients' && renderClients()}
-          {activeTab === 'finance' && (
-            <div className="h-full flex flex-col items-center justify-center text-center opacity-50">
-              <div className="w-20 h-20 bg-slate-200 rounded-full flex items-center justify-center mb-4"><DollarSign size={32} className="text-slate-400" /></div>
-              <h3 className="text-xl font-bold text-slate-800">Módulo Financeiro</h3>
-              <p className="text-slate-500">Em desenvolvimento</p>
-            </div>
-          )}
-          {activeTab === 'settings' && (
-            <div className="h-full flex flex-col items-center justify-center text-center opacity-50">
-              <div className="w-20 h-20 bg-slate-200 rounded-full flex items-center justify-center mb-4"><Settings size={32} className="text-slate-400" /></div>
-              <h3 className="text-xl font-bold text-slate-800">Configurações</h3>
-              <p className="text-slate-500">Em desenvolvimento</p>
-            </div>
-          )}
+          {activeTab === 'finance' && renderFinance()}
+          {activeTab === 'products' && renderProducts()}
+          {activeTab === 'contracts' && renderContracts()}
+          {activeTab === 'settings' && renderSettings()}
         </main>
       </div>
 
       {isModalOpen && renderNewClientModal()}
 
-      {/* Client Details Modal */}
       {isClientDetailsOpen && selectedClientForDetails && (
         <ClientDetails
           client={selectedClientForDetails}
@@ -900,7 +1194,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
         />
       )}
 
-      {/* Generalized Confirmation Modal */}
       <ConfirmationModal
         isOpen={confirmModal.isOpen}
         onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}

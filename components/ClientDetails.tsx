@@ -18,11 +18,18 @@ import { useToastContext } from '../contexts/ToastContext';
 export const ClientDetails: React.FC<ClientDetailsProps> = ({ client, onClose, onUpdate }) => {
     const [activeTab, setActiveTab] = useState<'info' | 'products' | 'contracts' | 'vault' | 'integrations' | 'notes'>('info');
     const [isEditing, setIsEditing] = useState(false);
+    const [editedClient, setEditedClient] = useState<ClientData>(client);
     const [showPassword, setShowPassword] = useState<{ [key: string]: boolean }>({});
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [configuringIntegration, setConfiguringIntegration] = useState<any>(null);
     const [configData, setConfigData] = useState<{ [key: string]: string }>({});
     const toast = useToastContext();
+
+    const handleSave = () => {
+        onUpdate(editedClient);
+        setIsEditing(false);
+        toast.success("Informações do cliente atualizadas!");
+    };
 
     const copyToClipboard = (text: string, id: string) => {
         navigator.clipboard.writeText(text);
@@ -49,7 +56,7 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({ client, onClose, o
             />
 
             {/* Offcanvas Panel */}
-            <div className="relative bg-white w-full max-w-2xl h-full shadow-2xl flex flex-col animate-slideIn">
+            <div className="relative bg-white w-full max-w-5xl h-full shadow-2xl flex flex-col animate-slideIn">
 
                 {/* Top Label & Actions */}
                 <div className="flex items-center justify-between px-10 py-6 border-b border-slate-100 bg-slate-50/30">
@@ -98,11 +105,23 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({ client, onClose, o
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                            <button className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 transition-all"><Plus size={18} /></button>
-                            <button className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 transition-all"><Mail size={18} /></button>
-                            <button className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 transition-all"><Phone size={18} /></button>
-                            <button className="w-10 h-10 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 transition-all"><Settings2 size={18} /></button>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => {
+                                    if (isEditing) {
+                                        handleSave();
+                                    } else {
+                                        setIsEditing(true);
+                                    }
+                                }}
+                                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all shadow-sm ${isEditing ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:scale-105'}`}
+                            >
+                                {isEditing ? <Check size={18} /> : <Edit size={18} />}
+                                {isEditing ? 'Salvar Edição' : 'Editar Cliente'}
+                            </button>
+                            <button className="w-12 h-12 rounded-xl border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 transition-all"><Mail size={20} /></button>
+                            <button className="w-12 h-12 rounded-xl border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 transition-all"><Phone size={20} /></button>
+                            <button className="w-12 h-12 rounded-xl border border-slate-200 flex items-center justify-center text-slate-400 hover:bg-slate-50 transition-all"><Settings2 size={20} /></button>
                         </div>
                     </div>
 
@@ -180,22 +199,40 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({ client, onClose, o
                                     Informações de Contato
                                 </h3>
 
-                                <div className="bg-slate-50 p-4 rounded-xl space-y-3">
+                                <div className="bg-slate-50 p-6 rounded-2xl space-y-4 border border-slate-100">
                                     <div>
-                                        <label className="text-xs text-slate-500 font-medium">Nome Completo</label>
-                                        <p className="text-slate-800 font-medium">{client.name}</p>
+                                        <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1 block">Nome Completo</label>
+                                        {isEditing ? (
+                                            <input type="text" value={editedClient.name} onChange={e => setEditedClient({ ...editedClient, name: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                        ) : (
+                                            <p className="text-slate-800 font-bold text-lg">{client.name}</p>
+                                        )}
                                     </div>
                                     <div>
-                                        <label className="text-xs text-slate-500 font-medium">Email</label>
-                                        <p className="text-slate-800 font-medium">{client.email}</p>
+                                        <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1 block">Email Principal</label>
+                                        {isEditing ? (
+                                            <input type="email" value={editedClient.email} onChange={e => setEditedClient({ ...editedClient, email: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                        ) : (
+                                            <p className="text-slate-800 font-medium">{client.email}</p>
+                                        )}
                                     </div>
-                                    <div>
-                                        <label className="text-xs text-slate-500 font-medium">Telefone</label>
-                                        <p className="text-slate-800 font-medium">{client.phone ? formatPhoneBR(client.phone) : 'Não informado'}</p>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs text-slate-500 font-medium">Responsável</label>
-                                        <p className="text-slate-800 font-medium">{client.responsiblePerson || 'Não informado'}</p>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1 block">Telefone</label>
+                                            {isEditing ? (
+                                                <input type="text" value={editedClient.phone || ''} onChange={e => setEditedClient({ ...editedClient, phone: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                            ) : (
+                                                <p className="text-slate-800 font-medium">{client.phone ? formatPhoneBR(client.phone) : 'Não informado'}</p>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-1 block">Responsável</label>
+                                            {isEditing ? (
+                                                <input type="text" value={editedClient.responsiblePerson || ''} onChange={e => setEditedClient({ ...editedClient, responsiblePerson: e.target.value })} className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none" />
+                                            ) : (
+                                                <p className="text-slate-800 font-medium">{client.responsiblePerson || 'Não informado'}</p>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -631,20 +668,21 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({ client, onClose, o
 
                 {/* Footer */}
                 {isEditing && (
-                    <div className="px-8 py-4 border-t border-slate-200 flex justify-end gap-3">
+                    <div className="px-10 py-6 border-t border-slate-100 bg-slate-50/30 flex justify-end gap-3">
                         <button
-                            onClick={() => setIsEditing(false)}
+                            onClick={() => {
+                                setIsEditing(false);
+                                setEditedClient(client);
+                            }}
                             className="px-6 py-3 border-2 border-slate-200 text-slate-700 rounded-xl font-bold hover:bg-slate-50 transition-colors"
                         >
                             Cancelar
                         </button>
                         <button
-                            onClick={() => {
-                                // Save changes
-                                setIsEditing(false);
-                            }}
-                            className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-200 transition-all"
+                            onClick={handleSave}
+                            className="px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 shadow-lg shadow-emerald-100 transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
                         >
+                            <Check size={20} />
                             Salvar Alterações
                         </button>
                     </div>
