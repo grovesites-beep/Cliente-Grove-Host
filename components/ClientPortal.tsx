@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { ClientData, BlogPost } from '../types';
 import { generateBlogOutline, generateFullPost } from '../services/geminiService';
+import { updateIntegrationStatus } from '../services/supabaseClient';
 
 interface ClientPortalProps {
   client: ClientData;
@@ -78,7 +79,6 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ client, onUpdateClie
     setBlogTopic('');
     setGeneratedContent('');
     alert("Publicado com sucesso no WordPress!");
-    alert("Publicado com sucesso no WordPress!");
   };
 
   // --- Funções de Integração (WordPress) ---
@@ -95,21 +95,36 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ client, onUpdateClie
     }
   };
 
-  const handleSaveWordPress = () => {
+  const handleSaveWordPress = async () => {
     setIsConnectingWp(true);
-    // Simulação de delay de conexão
-    setTimeout(() => {
-      setIsConnectingWp(false);
-      setWpModalOpen(false);
 
-      // Atualiza o status da integração no cliente
-      const updatedIntegrations = client.integrations.map(i =>
-        i.name === 'WordPress' ? { ...i, status: 'connected' as const, lastSync: 'Agora' } : i
-      );
+    // 1. Encontrar o ID da integração do WordPress para este cliente
+    const wpIntegration = client.integrations.find(i => i.name === 'WordPress');
 
-      onUpdateClient({ ...client, integrations: updatedIntegrations });
-      alert("WordPress conectado com sucesso!");
-    }, 1500);
+    if (wpIntegration) {
+      try {
+        // 2. Salvar no Supabase
+        await updateIntegrationStatus(wpIntegration.id, 'connected', 'Agora');
+
+        // 3. Atualizar Estado Local
+        const updatedIntegrations = client.integrations.map(i =>
+          i.id === wpIntegration.id ? { ...i, status: 'connected' as const, lastSync: 'Agora' } : i
+        );
+
+        onUpdateClient({ ...client, integrations: updatedIntegrations });
+        setWpModalOpen(false);
+        alert("WordPress conectado e salvo no banco de dados!");
+
+      } catch (error) {
+        console.error("Erro ao salvar integração:", error);
+        alert("Erro ao salvar conexão no banco.");
+      }
+    } else {
+      // Caso de fallback se não achar o ID (para mocks antigos)
+      alert("Integração WordPress não encontrada no cadastro do cliente.");
+    }
+
+    setIsConnectingWp(false);
   };
 
   // --- Componentes Internos de UI ---
