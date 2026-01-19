@@ -29,6 +29,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [clientSearchTerm, setClientSearchTerm] = useState('');
+  const [filterType, setFilterType] = useState('all');
 
   // New Client Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -320,13 +322,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
   };
 
   const renderClients = () => {
-    const [searchTerm, setSearchTerm] = useState('');
-    const [filterType, setFilterType] = useState('all'); // all, company, contact
-
-    const filteredClients = clients.filter(client => {
-      const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.company.toLowerCase().includes(searchTerm.toLowerCase());
+    const clientsFiltered = clients.filter(client => {
+      const matchesSearch = client.name.toLowerCase().includes(clientSearchTerm.toLowerCase()) ||
+        client.email.toLowerCase().includes(clientSearchTerm.toLowerCase()) ||
+        client.company.toLowerCase().includes(clientSearchTerm.toLowerCase());
       return matchesSearch;
     });
 
@@ -360,7 +359,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
-            <h2 className="text-3xl font-bold text-slate-800 tracking-tight">{filteredClients.length} Clientes</h2>
+            <h2 className="text-3xl font-bold text-slate-800 tracking-tight">{clientsFiltered.length} Clientes</h2>
             <p className="text-slate-500 mt-1">Gerencie todos os seus clientes em um só lugar</p>
           </div>
           <button
@@ -380,8 +379,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
               <input
                 type="text"
                 placeholder="Buscar cliente, email ou empresa..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                value={clientSearchTerm}
+                onChange={(e) => setClientSearchTerm(e.target.value)}
                 className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
               />
             </div>
@@ -431,7 +430,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {filteredClients.map((client) => (
+                {clientsFiltered.map((client) => (
                   <tr
                     key={client.id}
                     className="hover:bg-slate-50 transition-colors group cursor-pointer"
@@ -506,7 +505,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
           </div>
 
           {/* Empty State */}
-          {filteredClients.length === 0 && (
+          {clientsFiltered.length === 0 && (
             <div className="text-center py-16">
               <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Users size={32} className="text-slate-400" />
@@ -524,10 +523,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
         </div>
 
         {/* Pagination */}
-        {filteredClients.length > 0 && (
+        {clientsFiltered.length > 0 && (
           <div className="flex items-center justify-between px-6 py-4 bg-white rounded-2xl border border-slate-200">
             <p className="text-sm text-slate-600">
-              Mostrando <span className="font-bold">{filteredClients.length}</span> de <span className="font-bold">{clients.length}</span> resultados
+              Mostrando <span className="font-bold">{clientsFiltered.length}</span> de <span className="font-bold">{clients.length}</span> resultados
             </p>
             <div className="flex items-center gap-2">
               <button className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">
