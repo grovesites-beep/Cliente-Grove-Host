@@ -25,12 +25,31 @@ export interface BlogPost {
   content?: string;
 }
 
+export enum ContractCycle {
+  MONTHLY = 'Mensal',
+  QUARTERLY = 'Trimestral',
+  SEMIANNUAL = 'Semestral',
+  ANNUAL = 'Anual'
+}
+
+export interface GlobalProduct {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  cycle: ContractCycle;
+  active: boolean;
+}
+
 export interface Product {
   id: string;
   name: string;
   description: string;
   price: number;
   active: boolean;
+  cycle?: ContractCycle;
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface Contract {
@@ -40,6 +59,7 @@ export interface Contract {
   endDate: string;
   value: number;
   status: 'active' | 'expired' | 'pending';
+  cycle?: ContractCycle;
   fileUrl?: string;
 }
 

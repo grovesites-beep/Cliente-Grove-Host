@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ClientData, SiteType } from '../types';
+import { ClientData, SiteType, GlobalProduct, ContractCycle } from '../types';
 import {
   Users, LayoutDashboard, Settings, LogOut, Search, Bell,
   Menu, ChevronRight, DollarSign, Briefcase, Plus, MoreVertical, ExternalLink, X, Save, FileText, ArrowUpRight, Database, Star, Mail, Phone, Package, Edit2, Trash2, ShieldCheck
@@ -14,6 +14,7 @@ import { ClientDetails } from './ClientDetails';
 import { ClientEditModal } from './ClientEditModal';
 import { ContractManager } from './ContractManager';
 import { ProductManager } from './ProductManager';
+import { GlobalProductManager } from './GlobalProductManager';
 import { ConfirmationModal } from './ConfirmationModal';
 import { useToastContext } from '../contexts/ToastContext';
 import { notificationService } from '../services/notificationService';
@@ -113,14 +114,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
     toast.success("Configurações salvas com sucesso!");
   };
 
-  const [newClient, setNewClient] = useState({
+  const [newClient, setNewClient] = useState<Partial<ClientData>>({
     name: '',
     company: '',
     email: '',
+    phone: '',
     siteUrl: '',
     siteType: SiteType.INSTITUTIONAL,
     hostingExpiry: '',
-    maintenanceMode: false
+    maintenanceMode: false,
+    products: [],
+    contracts: [],
+    integrations: [],
+    posts: [],
+    visits: [0, 0, 0, 0, 0, 0, 0]
   });
 
   // Client Details Modal State
@@ -130,6 +137,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
   // Client FULL Edit Modal State
   const [selectedClientForEdit, setSelectedClientForEdit] = useState<ClientData | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Global Product Catalog State
+  const [globalProducts, setGlobalProducts] = useState<GlobalProduct[]>(() => {
+    const saved = localStorage.getItem('nexusHub_global_products');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const saveGlobalProducts = (products: GlobalProduct[]) => {
+    setGlobalProducts(products);
+    localStorage.setItem('nexusHub_global_products', JSON.stringify(products));
+  };
 
   // Deletion/Logout Confirmation State
   const [confirmModal, setConfirmModal] = useState<{
@@ -148,13 +166,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
 
   // Column Widths for Resizable Columns
   const [columnWidths, setColumnWidths] = useState<{ [key: string]: number }>({
-    cliente: 250,
-    contato: 250,
-    empresa: 180,
+    name: 200,
+    company: 180,
+    email: 220,
+    siteType: 150,
     status: 120,
-    site: 200,
-    acoes: 100
+    actions: 100
   });
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const getAvatarColor = (name: string) => {
+    const colors = [
+      'bg-indigo-500', 'bg-purple-500', 'bg-pink-500', 'bg-rose-500',
+      'bg-orange-500', 'bg-amber-500', 'bg-emerald-500', 'bg-teal-500',
+      'bg-cyan-500', 'bg-blue-500'
+    ];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
+  };
 
   const [resizing, setResizing] = useState<string | null>(null);
 
@@ -201,11 +237,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
 
   const handleCreateClient = (e: React.FormEvent) => {
     e.preventDefault();
-    onAddClient(newClient);
+
+    // Ensure data integrity for new client
+    const clientToAdd = {
+      ...newClient,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    } as ClientData;
+
+    onAddClient(clientToAdd);
     setIsModalOpen(false);
     setNewClient({
-      name: '', company: '', email: '', siteUrl: '', siteType: SiteType.INSTITUTIONAL, hostingExpiry: '', maintenanceMode: false
+      name: '',
+      company: '',
+      email: '',
+      phone: '',
+      siteUrl: '',
+      siteType: SiteType.INSTITUTIONAL,
+      hostingExpiry: '',
+      maintenanceMode: false,
+      products: [],
+      contracts: [],
+      integrations: [],
+      posts: [],
+      visits: [0, 0, 0, 0, 0, 0, 0]
     });
+    toast.success("Novo cliente cadastrado com sucesso!");
   };
 
   // Mock data for Admin Charts
@@ -240,73 +298,155 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
   );
 
 
-  const renderNewClientModal = () => (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl p-8 w-full max-w-lg shadow-2xl animate-fadeIn">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-xl font-bold text-slate-800">Adicionar Novo Cliente</h3>
-          <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-full"><X size={20} /></button>
-        </div>
-        <form onSubmit={handleCreateClient} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-bold text-slate-500 uppercase">Nome do Cliente</label>
-              <input required className="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 mt-1"
-                value={newClient.name} onChange={e => setNewClient({ ...newClient, name: e.target.value })} />
+  const renderNewClientModal = () => {
+    // Helper to add a product from global catalog
+    const addInitialService = (globalProdId: string) => {
+      const prod = globalProducts.find(p => p.id === globalProdId);
+      if (prod) {
+        const startDate = new Date();
+        const expiryDate = new Date();
+
+        // Auto-calculate expiry based on cycle
+        if (prod.cycle === ContractCycle.MONTHLY) expiryDate.setMonth(startDate.getMonth() + 1);
+        else if (prod.cycle === ContractCycle.QUARTERLY) expiryDate.setMonth(startDate.getMonth() + 3);
+        else if (prod.cycle === ContractCycle.ANNUAL) expiryDate.setFullYear(startDate.getFullYear() + 1);
+        else expiryDate.setMonth(startDate.getMonth() + 1); // Default to monthly
+
+        setNewClient({
+          ...newClient,
+          hostingExpiry: expiryDate.toISOString().split('T')[0],
+          products: [{
+            id: Date.now().toString(),
+            name: prod.name,
+            description: prod.description,
+            price: prod.price,
+            active: true,
+            cycle: prod.cycle as ContractCycle,
+            startDate: startDate.toISOString().split('T')[0],
+            endDate: expiryDate.toISOString().split('T')[0]
+          }]
+        });
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[2000] flex items-center justify-center p-4 animate-fadeIn">
+        <div className="bg-white w-full max-w-2xl rounded-[32px] shadow-2xl overflow-hidden animate-scaleIn border border-white/20">
+          <div className="px-8 py-6 border-b border-slate-50 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-100">
+                <Plus size={20} />
+              </div>
+              <h3 className="text-xl font-black text-slate-800 tracking-tight">Novo Cliente</h3>
             </div>
-            <div>
-              <label className="text-xs font-bold text-slate-500 uppercase">Empresa</label>
-              <input required className="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 mt-1"
-                value={newClient.company} onChange={e => setNewClient({ ...newClient, company: e.target.value })} />
+            <button onClick={() => setIsModalOpen(false)} className="w-8 h-8 rounded-lg hover:bg-slate-50 flex items-center justify-center text-slate-400">
+              <X size={20} />
+            </button>
+          </div>
+
+          <form onSubmit={handleCreateClient} className="p-8 space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Nome do Cliente</label>
+                <input
+                  required
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none"
+                  value={newClient.name}
+                  onChange={e => setNewClient({ ...newClient, name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Empresa / Projeto</label>
+                <input
+                  required
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none"
+                  value={newClient.company}
+                  onChange={e => setNewClient({ ...newClient, company: e.target.value })}
+                />
+              </div>
             </div>
-          </div>
-          <div>
-            <label className="text-xs font-bold text-slate-500 uppercase">Email de Acesso</label>
-            <input required type="email" className="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 mt-1"
-              value={newClient.email} onChange={e => setNewClient({ ...newClient, email: e.target.value })} />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-slate-500 uppercase">URL do Site</label>
-            <input required className="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 mt-1" placeholder="ex: meusite.com"
-              value={newClient.siteUrl} onChange={e => setNewClient({ ...newClient, siteUrl: e.target.value })} />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-bold text-slate-500 uppercase">Tipo</label>
-              <select className="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 mt-1"
-                value={newClient.siteType} onChange={e => setNewClient({ ...newClient, siteType: e.target.value as SiteType })}>
-                <option value={SiteType.INSTITUTIONAL}>Institucional</option>
-                <option value={SiteType.LANDING_PAGE}>Landing Page</option>
-                <option value={SiteType.ECOMMERCE}>E-commerce</option>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">E-mail de Acesso</label>
+                <input
+                  required
+                  type="email"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none"
+                  value={newClient.email}
+                  onChange={e => setNewClient({ ...newClient, email: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">WhatsApp</label>
+                <input
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-semibold focus:bg-white focus:ring-2 focus:ring-indigo-500/10 transition-all outline-none"
+                  value={newClient.phone}
+                  onChange={e => setNewClient({ ...newClient, phone: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Serviço Inicial (Catálogo)</label>
+              <select
+                className="w-full px-4 py-2.5 bg-indigo-50/50 border border-indigo-100 rounded-xl text-sm font-bold text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-500/20"
+                onChange={(e) => addInitialService(e.target.value)}
+              >
+                <option value="">Selecione um serviço do catálogo...</option>
+                {globalProducts.map(prod => (
+                  <option key={prod.id} value={prod.id}>{prod.name} - {formatCurrencyBR(prod.price)}/{prod.cycle}</option>
+                ))}
               </select>
             </div>
-            <div>
-              <label className="text-xs font-bold text-slate-500 uppercase">Vencimento Hosp.</label>
-              <input type="date" required className="w-full p-3 rounded-xl bg-slate-50 border border-slate-100 mt-1"
-                value={newClient.hostingExpiry} onChange={e => setNewClient({ ...newClient, hostingExpiry: e.target.value })} />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Tipo de Site</label>
+                <select
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-700 outline-none"
+                  value={newClient.siteType}
+                  onChange={e => setNewClient({ ...newClient, siteType: e.target.value as SiteType })}
+                >
+                  {Object.values(SiteType).map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Vencimento Hospedagem</label>
+                <input
+                  type="date"
+                  required
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-sm font-bold text-slate-700 outline-none"
+                  value={newClient.hostingExpiry}
+                  onChange={e => setNewClient({ ...newClient, hostingExpiry: e.target.value })}
+                />
+              </div>
             </div>
-          </div>
-          <button type="submit" className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-lg shadow-indigo-200 mt-4">
-            Criar Cliente
-          </button>
-        </form>
+
+            <div className="pt-4">
+              <button
+                type="submit"
+                className="w-full py-4 bg-indigo-600 text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl hover:bg-slate-900 transition-all shadow-xl shadow-indigo-100 active:scale-95"
+              >
+                Cadastrar este Cliente
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderOverview = () => {
     // Calculate real data from clients
     const activeClients = clients.filter(c => !c.maintenanceMode).length;
     const newClientsThisMonth = clients.length; // Simplified
 
-    // Calculate projected revenue based on client types
-    const revenueByType = {
-      [SiteType.ECOMMERCE]: 2500,
-      [SiteType.INSTITUTIONAL]: 1500,
-      [SiteType.LANDING_PAGE]: 800,
-    };
+    // Calculate REAL revenue based on client contracts and products
     const projectedRevenue = clients.reduce((sum, client) => {
-      return sum + (revenueByType[client.siteType] || 1000);
+      const contractSum = (client.contracts || []).reduce((s, c) => c.status === 'active' ? s + (c.value / 12) : s, 0); // Approx monthly
+      const productSum = (client.products || []).reduce((s, p) => p.active ? s + p.price : s, 0);
+      return sum + contractSum + productSum;
     }, 0);
 
     // Calculate weekly activity from client visits data
@@ -452,27 +592,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
             {/* Top Items List */}
             <div className="bg-white p-6 rounded-[30px] border border-slate-100 shadow-sm">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-bold">Solicitações Recentes</h3>
+                <h3 className="text-lg font-bold">Últimos Clientes</h3>
                 <button className="p-1 hover:bg-slate-50 rounded-full"><MoreVertical size={16} className="text-slate-400" /></button>
               </div>
               <div className="space-y-5">
-                {[1, 2, 3].map((_, i) => (
-                  <div key={i} className="flex items-center justify-between">
+                {clients.slice(-3).reverse().map((client, i) => (
+                  <div key={client.id} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center border-2 border-white shadow-sm">
-                        <span className="text-xs font-bold text-slate-600">CJ</span>
+                      <div className={`w-10 h-10 rounded-full ${getAvatarColor(client.name)} flex items-center justify-center border-2 border-white shadow-sm`}>
+                        <span className="text-xs font-bold text-white">{getInitials(client.name)}</span>
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-slate-800">Code Journey</p>
-                        <p className="text-xs text-slate-400">Novo Post Blog</p>
+                        <p className="text-sm font-bold text-slate-800">{client.company}</p>
+                        <p className="text-xs text-slate-400">{client.siteType}</p>
                       </div>
                     </div>
-                    <span className="px-2 py-1 bg-green-50 text-green-600 text-[10px] font-bold rounded-lg">+12%</span>
+                    <span className="px-2 py-1 bg-green-50 text-green-600 text-[10px] font-bold rounded-lg">Novo</span>
                   </div>
                 ))}
               </div>
-              <button className="w-full mt-6 py-3 bg-slate-900 text-white rounded-xl text-sm font-bold shadow-lg shadow-slate-200 hover:bg-slate-800 transition-colors">
-                Ver Todas
+              <button onClick={() => setActiveTab('clients')} className="w-full mt-6 py-3 bg-slate-900 text-white rounded-xl text-sm font-bold shadow-lg shadow-slate-200 hover:bg-slate-800 transition-colors">
+                Ver Todos
               </button>
             </div>
 
@@ -489,20 +629,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
         client.company.toLowerCase().includes(clientSearchTerm.toLowerCase());
       return matchesSearch;
     });
-
-    const getInitials = (name: string) => {
-      return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-    };
-
-    const getAvatarColor = (name: string) => {
-      const colors = [
-        'bg-indigo-500', 'bg-purple-500', 'bg-pink-500', 'bg-rose-500',
-        'bg-orange-500', 'bg-amber-500', 'bg-emerald-500', 'bg-teal-500',
-        'bg-cyan-500', 'bg-blue-500'
-      ];
-      const index = name.charCodeAt(0) % colors.length;
-      return colors[index];
-    };
 
     const getStatusBadge = (client: ClientData) => {
       if (client.maintenanceMode) {
@@ -761,9 +887,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
 
   const renderProducts = () => {
     return (
-      <ProductManager
-        clients={clients}
-        onUpdateClient={onUpdateClient}
+      <GlobalProductManager
+        products={globalProducts}
+        onSaveProducts={saveGlobalProducts}
       />
     );
   };
