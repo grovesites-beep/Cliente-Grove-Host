@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { AdminDashboard } from './components/AdminDashboard';
 import { ClientPortal } from './components/ClientPortal';
 import { AuthPages } from './components/AuthPages';
+// ... (imports remain)
 import { ClientData, UserRole, SiteType } from './types';
 import { ArrowLeft } from 'lucide-react';
-import { fetchClients, createClientInDb, fetchClientByEmail, seedDatabase } from './services/supabaseClient';
+import { fetchClients, createClientInDb, fetchClientByEmail, seedDatabase, supabase, getUserRole } from './services/supabaseClient';
 
 type AuthState = 'unauthenticated' | 'authenticated';
 
@@ -12,7 +13,7 @@ const App: React.FC = () => {
   const [authState, setAuthState] = useState<AuthState>('unauthenticated');
   const [currentUserRole, setCurrentUserRole] = useState<UserRole | null>(null);
   const [clients, setClients] = useState<ClientData[]>([]);
-  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(true); // Start true to wait for auth check
 
   // O cliente selecionado pode ser o próprio usuário logado (se for CLIENTE)
   // ou um cliente que o Admin está visualizando (Impersonation)
@@ -21,18 +22,57 @@ const App: React.FC = () => {
   // Flag para saber se é um admin visualizando como cliente
   const [isImpersonating, setIsImpersonating] = useState(false);
 
-  // Carregar dados iniciais do Supabase
+  // Carregar dados e Verificar Sessão ao Iniciar
   useEffect(() => {
-    const loadData = async () => {
+    const initApp = async () => {
       setIsLoadingData(true);
-      const data = await fetchClients();
-      if (data) {
-        setClients(data);
+
+      // 1. Verificar Sessão Existente (Persistência)
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (session?.user) {
+        // Usuário está logado, recuperar estado
+        const role = await getUserRole(session.user.id);
+
+        if (role === 'admin') {
+          setAuthState('authenticated');
+          setCurrentUserRole(UserRole.ADMIN);
+          // Carregar lista de clientes para o admin
+          const clientsList = await fetchClients();
+          setClients(clientsList);
+        } else {
+          // É cliente
+          setAuthState('authenticated');
+          setCurrentUserRole(UserRole.CLIENT);
+          if (session.user.email) {
+            const clientData = await fetchClientByEmail(session.user.email);
+            if (clientData) {
+              setSelectedClient(clientData);
+            }
+          }
+        }
+      } else {
+        // Ninguém logado, mas se quisermos carregar algo público... (não é o caso aqui)
       }
+
       setIsLoadingData(false);
     };
-    loadData();
-  }, []); // Executa apenas na montagem
+
+    initApp();
+
+    // Listener para mudanças de auth (opcional, mas bom para login/logout em outras abas)
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setAuthState('unauthenticated');
+        setCurrentUserRole(null);
+        setSelectedClient(null);
+      }
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
 
   // --- Handlers de Autenticação ---
 
