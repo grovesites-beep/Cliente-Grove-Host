@@ -9,6 +9,7 @@ import {
 import { ClientData, BlogPost } from '../types';
 import { generateBlogOutline, generateFullPost } from '../services/geminiService';
 import { updateIntegrationStatus } from '../services/supabaseClient';
+import { useToastContext } from '../contexts/ToastContext';
 
 interface ClientPortalProps {
   client: ClientData;
@@ -18,6 +19,7 @@ interface ClientPortalProps {
 export const ClientPortal: React.FC<ClientPortalProps> = ({ client, onUpdateClient }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'blog' | 'integrations' | 'settings'>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const toast = useToastContext();
 
   // Estados do Blog (Mantidos da versão anterior)
   const [isGenerating, setIsGenerating] = useState(false);
@@ -113,15 +115,15 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ client, onUpdateClie
 
         onUpdateClient({ ...client, integrations: updatedIntegrations });
         setWpModalOpen(false);
-        alert("WordPress conectado e salvo no banco de dados!");
+        toast.success("WordPress conectado com sucesso!");
 
       } catch (error) {
         console.error("Erro ao salvar integração:", error);
-        alert("Erro ao salvar conexão no banco.");
+        toast.error("Erro ao salvar conexão no banco.");
       }
     } else {
       // Caso de fallback se não achar o ID (para mocks antigos)
-      alert("Integração WordPress não encontrada no cadastro do cliente.");
+      toast.error("Integração WordPress não encontrada.");
     }
 
     setIsConnectingWp(false);

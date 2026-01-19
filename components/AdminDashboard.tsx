@@ -11,6 +11,7 @@ import {
   BarChart, Bar, PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { ClientDetails } from './ClientDetails';
+import { ConfirmationModal } from './ConfirmationModal';
 
 interface AdminDashboardProps {
   clients: ClientData[];
@@ -49,8 +50,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
   });
 
   // Client Details Modal State
+  // Client Details Modal State
   const [selectedClientForDetails, setSelectedClientForDetails] = useState<ClientData | null>(null);
   const [isClientDetailsOpen, setIsClientDetailsOpen] = useState(false);
+
+  // Deletion/Logout Confirmation State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    type: 'danger' | 'warning' | 'info';
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    type: 'info',
+    title: '',
+    message: '',
+    onConfirm: () => { }
+  });
 
   // Column Widths for Resizable Columns
   const [columnWidths, setColumnWidths] = useState<{ [key: string]: number }>({
@@ -600,7 +617,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            onDeleteClient(client.id);
+                            setConfirmModal({
+                              isOpen: true,
+                              type: 'danger',
+                              title: 'Excluir Cliente',
+                              message: `Tem certeza que deseja excluir ${client.name}? Esta ação é irreversível e removerá todos os dados associados.`,
+                              onConfirm: () => onDeleteClient(client.id)
+                            });
                           }}
                           className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
                           title="Excluir cliente"
@@ -779,7 +802,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
           </button>
 
           <button
-            onClick={onLogout}
+            onClick={() => setConfirmModal({
+              isOpen: true,
+              type: 'warning',
+              title: 'Sair do Sistema',
+              message: 'Tem certeza que deseja encerrar sua sessão atual?',
+              onConfirm: onLogout
+            })}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-all"
           >
             <LogOut size={20} />
@@ -870,6 +899,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
           }}
         />
       )}
+
+      {/* Generalized Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+        onConfirm={confirmModal.onConfirm}
+        title={confirmModal.title}
+        message={confirmModal.message}
+        type={confirmModal.type}
+        confirmText="Confirmar"
+        cancelText="Cancelar"
+      />
     </div>
   );
 };

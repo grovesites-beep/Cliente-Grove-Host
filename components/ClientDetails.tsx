@@ -13,6 +13,8 @@ interface ClientDetailsProps {
     onUpdate: (client: ClientData) => void;
 }
 
+import { useToastContext } from '../contexts/ToastContext';
+
 export const ClientDetails: React.FC<ClientDetailsProps> = ({ client, onClose, onUpdate }) => {
     const [activeTab, setActiveTab] = useState<'info' | 'products' | 'contracts' | 'vault' | 'integrations' | 'notes'>('info');
     const [isEditing, setIsEditing] = useState(false);
@@ -20,10 +22,12 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({ client, onClose, o
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [configuringIntegration, setConfiguringIntegration] = useState<any>(null);
     const [configData, setConfigData] = useState<{ [key: string]: string }>({});
+    const toast = useToastContext();
 
     const copyToClipboard = (text: string, id: string) => {
         navigator.clipboard.writeText(text);
         setCopiedId(id);
+        toast.success("Copiado para a área de transferência!");
         setTimeout(() => setCopiedId(null), 2000);
     };
 
