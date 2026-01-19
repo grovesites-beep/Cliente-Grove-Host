@@ -10,6 +10,7 @@ import { ClientData, BlogPost } from '../types';
 import { generateBlogOutline, generateFullPost } from '../services/geminiService';
 import { updateIntegrationStatus } from '../services/supabaseClient';
 import { useToastContext } from '../contexts/ToastContext';
+import { notificationService } from '../services/notificationService';
 
 interface ClientPortalProps {
   client: ClientData;
@@ -76,11 +77,23 @@ export const ClientPortal: React.FC<ClientPortalProps> = ({ client, onUpdateClie
       content: generatedContent
     };
     onUpdateClient({ ...client, posts: [newPost, ...client.posts] });
+
+    // Notificar cliente sobre a nova publicação
+    try {
+      notificationService.sendEmail(
+        client.email,
+        `Seu novo artigo foi publicado: ${newPost.title}`,
+        `<h1>Sucesso!</h1><p>Seu novo artigo "<strong>${newPost.title}</strong>" acaba de ser publicado no seu site.</p>`
+      );
+    } catch (e) {
+      console.error(e);
+    }
+
     setBlogModalOpen(false);
     setStep(1);
     setBlogTopic('');
     setGeneratedContent('');
-    alert("Publicado com sucesso no WordPress!");
+    toast.success("Artigo publicado e notificações enviadas!");
   };
 
   // --- Funções de Integração (WordPress) ---

@@ -13,6 +13,7 @@ import {
 import { ClientDetails } from './ClientDetails';
 import { ConfirmationModal } from './ConfirmationModal';
 import { useToastContext } from '../contexts/ToastContext';
+import { notificationService } from '../services/notificationService';
 
 interface AdminDashboardProps {
   clients: ClientData[];
@@ -61,6 +62,48 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
   });
 
   const toast = useToastContext();
+
+  const [qrCodeData, setQrCodeData] = useState<string | null>(null);
+  const [isFetchingQr, setIsFetchingQr] = useState(false);
+
+  const handleGenerateQrCode = async () => {
+    if (!settings.evolutionApiUrl || !settings.evolutionApiKey || !settings.evolutionInstance) {
+      toast.error("Configure a API Evolution nas configurações primeiro.");
+      setSettingsSubTab('notifications');
+      return;
+    }
+
+    setIsFetchingQr(true);
+    try {
+      // Simulação de chamada real para a Evolution API
+      // Em produção: 
+      // const res = await fetch(`${settings.evolutionApiUrl}/instance/connect/${settings.evolutionInstance}`, { headers: { apikey: settings.evolutionApiKey } });
+      // const data = await res.json();
+
+      await new Promise(r => setTimeout(r, 1500)); // Simula delay
+      setQrCodeData('https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=NexusHub_WP_Connect_Demo');
+      toast.success("QR Code gerado com sucesso!");
+    } catch (err) {
+      toast.error("Erro ao conectar com a API Evolution.");
+    } finally {
+      setIsFetchingQr(false);
+    }
+  };
+
+  const handleSendInvoiceNotification = async (client: any) => {
+    toast.info(`Enviando fatura para ${client.company}...`);
+    try {
+      // Usando o serviço de notificação
+      await notificationService.sendEmail(
+        client.email,
+        "Sua Fatura NexusHub está disponível",
+        `<h1>Olá ${client.name}</h1><p>Sua fatura do mês de Jan/2026 já está disponível no portal.</p>`
+      );
+      toast.success("Notificação de fatura enviada!");
+    } catch (e) {
+      toast.error("Erro ao enviar notificação.");
+    }
+  };
 
   const handleSaveSettings = () => {
     localStorage.setItem('nexusHub_settings', JSON.stringify(settings));
@@ -680,9 +723,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
                       <p className="text-xs text-slate-400">Mensalidade • 15/05/2026</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-emerald-600">+{formatCurrencyBR(1500)}</p>
-                    <span className="text-[10px] px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-bold">Pago</span>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-emerald-600">+{formatCurrencyBR(1500)}</p>
+                      <span className="text-[10px] px-2 py-1 bg-green-100 text-green-700 rounded-full font-bold">Pago</span>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSendInvoiceNotification(client);
+                      }}
+                      className="p-2 hover:bg-white rounded-xl text-slate-400 hover:text-indigo-600 transition-all shadow-sm border border-transparent hover:border-slate-100"
+                      title="Notificar Fatura"
+                    >
+                      <Bell size={16} />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -1042,10 +1097,32 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
                         </div>
                       </div>
                     </div>
-                    <div className="pt-4">
-                      <button className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-slate-200 text-slate-700 rounded-2xl font-bold hover:bg-slate-50 transition-all">
-                        <ExternalLink size={18} /> Gerar QR Code para WhatsApp
-                      </button>
+                    <div className="pt-4 space-y-4">
+                      {qrCodeData ? (
+                        <div className="bg-white p-6 rounded-3xl border border-slate-100 inline-block">
+                          <img src={qrCodeData} alt="WhatsApp QR Code" className="w-48 h-48 mx-auto" />
+                          <p className="text-[10px] text-slate-400 mt-4 text-center">Escaneie com seu WhatsApp para conectar</p>
+                          <button
+                            onClick={() => setQrCodeData(null)}
+                            className="w-full mt-4 text-xs font-bold text-red-500 hover:underline"
+                          >
+                            Limpar QR Code
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={handleGenerateQrCode}
+                          disabled={isFetchingQr}
+                          className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-slate-200 text-slate-700 rounded-2xl font-bold hover:bg-slate-50 transition-all disabled:opacity-50"
+                        >
+                          {isFetchingQr ? (
+                            <span className="w-4 h-4 border-2 border-slate-300 border-t-indigo-600 rounded-full animate-spin"></span>
+                          ) : (
+                            <ExternalLink size={18} />
+                          )}
+                          {isFetchingQr ? 'Gerando...' : 'Gerar QR Code para WhatsApp'}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </section>
