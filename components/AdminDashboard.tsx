@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ClientData, SiteType } from '../types';
 import {
   Users, LayoutDashboard, Settings, LogOut, Search, Bell,
@@ -21,7 +21,12 @@ interface AdminDashboardProps {
 
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelectClient, onSwitchToClientView, onAddClient, onLogout, onSeedDatabase }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'clients' | 'finance' | 'settings'>('overview');
+  // Load saved tab from localStorage
+  const [activeTab, setActiveTab] = useState<'overview' | 'clients' | 'finance' | 'settings'>(() => {
+    const saved = localStorage.getItem('adminActiveTab');
+    return (saved as 'overview' | 'clients' | 'finance' | 'settings') || 'overview';
+  });
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -36,6 +41,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
     hostingExpiry: '',
     maintenanceMode: false
   });
+
+  // Save active tab to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('adminActiveTab', activeTab);
+  }, [activeTab]);
 
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
