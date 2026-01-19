@@ -3,7 +3,7 @@ import { ClientData, Product, Contract, PasswordVaultItem } from '../types';
 import {
     X, User, Mail, Phone, MapPin, Globe, Calendar, Lock, FileText,
     Package, CreditCard, Key, Edit, Trash2, Plus, Eye, EyeOff, Copy,
-    Check, Building2, UserCircle, StickyNote
+    Check, Building2, UserCircle, StickyNote, Settings2
 } from 'lucide-react';
 import { formatPhoneBR, formatDateBR, formatCurrencyBR, formatCEP } from '../utils/formatters';
 
@@ -18,6 +18,8 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({ client, onClose, o
     const [isEditing, setIsEditing] = useState(false);
     const [showPassword, setShowPassword] = useState<{ [key: string]: boolean }>({});
     const [copiedId, setCopiedId] = useState<string | null>(null);
+    const [configuringIntegration, setConfiguringIntegration] = useState<any>(null);
+    const [configData, setConfigData] = useState<{ [key: string]: string }>({});
 
     const copyToClipboard = (text: string, id: string) => {
         navigator.clipboard.writeText(text);
@@ -113,6 +115,14 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({ client, onClose, o
                     >
                         <Key size={16} className="inline mr-2" />
                         Cofre de Senhas ({client.passwordVault?.length || 0})
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('integrations')}
+                        className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors whitespace-nowrap ${activeTab === 'integrations' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+                            }`}
+                    >
+                        <Settings2 size={16} className="inline mr-2" />
+                        Integrações ({client.integrations?.length || 0})
                     </button>
                     <button
                         onClick={() => setActiveTab('notes')}
@@ -415,6 +425,146 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({ client, onClose, o
                                 <div className="text-center py-16 bg-slate-50 rounded-xl">
                                     <Key size={48} className="mx-auto text-slate-300 mb-4" />
                                     <p className="text-slate-500">Nenhuma senha cadastrada</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {activeTab === 'integrations' && (
+                        <div className="space-y-6">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-lg font-bold text-slate-800">Integrações de Dados</h3>
+                                <p className="text-sm text-slate-500">Configure as fontes de dados para este cliente</p>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {client.integrations && client.integrations.map((integration) => (
+                                    <div key={integration.id} className="bg-white border border-slate-200 rounded-2xl p-6 hover:shadow-md transition-all group">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center border border-slate-100 p-2">
+                                                    <img src={integration.icon} alt={integration.name} className="w-full h-full object-contain" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold text-slate-800">{integration.name}</h4>
+                                                    <span className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${integration.status === 'connected' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
+                                                        {integration.status === 'connected' ? 'Conectado' : 'Desconectado'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => {
+                                                    // In a real app, this would open a specific config modal
+                                                    const newStatus = integration.status === 'connected' ? 'disconnected' : 'connected';
+                                                    const updatedIntegrations = client.integrations.map(i =>
+                                                        i.id === integration.id ? { ...i, status: newStatus as any, lastSync: new Date().toISOString() } : i
+                                                    );
+                                                    onUpdate({ ...client, integrations: updatedIntegrations });
+                                                }}
+                                                className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${integration.status === 'connected'
+                                                    ? 'bg-slate-100 text-slate-600 hover:bg-red-50 hover:text-red-600'
+                                                    : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                                                    }`}
+                                            >
+                                                {integration.status === 'connected' ? 'Desconectar' : 'Conectar'}
+                                            </button>
+                                        </div>
+                                        <div className="flex items-center justify-between text-xs text-slate-400">
+                                            <span>Última sincronização: {integration.lastSync ? formatDateBR(integration.lastSync) : 'Nunca'}</span>
+                                            <button
+                                                onClick={() => {
+                                                    setConfiguringIntegration(integration);
+                                                    setConfigData({});
+                                                }}
+                                                className="text-indigo-600 font-bold hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                Configurar
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="mt-8 p-6 bg-indigo-50 rounded-2xl border border-indigo-100">
+                                <h4 className="font-bold text-indigo-900 mb-2">Dica de Especialista</h4>
+                                <p className="text-sm text-indigo-700 leading-relaxed">
+                                    Conecte o WordPress e o Google Analytics para habilitar o relatório automático de performance e o co-piloto de IA.
+                                </p>
+                            </div>
+
+                            {/* Integration Config Modal */}
+                            {configuringIntegration && (
+                                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[1001] p-4 animate-fadeIn">
+                                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md animate-slideIn overflow-hidden">
+                                        <div className="bg-indigo-600 p-6 text-white flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-lg bg-white/20 p-2">
+                                                    <img src={configuringIntegration.icon} alt="" className="w-full h-full object-contain brightness-0 invert" />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-bold">Configurar {configuringIntegration.name}</h4>
+                                                    <p className="text-xs text-white/70">Ajuste as chaves de conexão</p>
+                                                </div>
+                                            </div>
+                                            <button onClick={() => setConfiguringIntegration(null)} className="hover:bg-white/10 p-2 rounded-full transition-colors">
+                                                <X size={20} />
+                                            </button>
+                                        </div>
+
+                                        <div className="p-8 space-y-6">
+                                            {configuringIntegration.name === 'WordPress' ? (
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <label className="text-xs font-bold text-slate-500 uppercase">URL do JSON API</label>
+                                                        <input
+                                                            type="text"
+                                                            className="w-full mt-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                                                            placeholder="https://site.com/wp-json"
+                                                            value={configData.wpUrl || ''}
+                                                            onChange={(e) => setConfigData({ ...configData, wpUrl: e.target.value })}
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-xs font-bold text-slate-500 uppercase">Application Password</label>
+                                                        <input
+                                                            type="password"
+                                                            className="w-full mt-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                                                            placeholder="xxxx xxxx xxxx xxxx"
+                                                            value={configData.wpPass || ''}
+                                                            onChange={(e) => setConfigData({ ...configData, wpPass: e.target.value })}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <label className="text-xs font-bold text-slate-500 uppercase">Measurement ID (G-XXXXX)</label>
+                                                        <input
+                                                            type="text"
+                                                            className="w-full mt-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                                                            placeholder="G-12345678"
+                                                            value={configData.gaId || ''}
+                                                            onChange={(e) => setConfigData({ ...configData, gaId: e.target.value })}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            <button
+                                                onClick={() => {
+                                                    // In a real app, update the integration object with configData
+                                                    const updatedIntegrations = client.integrations.map(i =>
+                                                        i.id === configuringIntegration.id ? { ...i, status: 'connected' as any, lastSync: new Date().toISOString() } : i
+                                                    );
+                                                    onUpdate({ ...client, integrations: updatedIntegrations });
+                                                    setConfiguringIntegration(null);
+                                                }}
+                                                className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all active:scale-95"
+                                            >
+                                                Salvar e Testar Conexão
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>

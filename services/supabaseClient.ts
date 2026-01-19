@@ -251,6 +251,21 @@ export const updateClientInDb = async (clientId: string, updates: Partial<Client
 };
 
 /**
+ * Update the status of an integration in Supabase
+ */
+export const updateIntegrationStatus = async (integrationId: string, status: 'connected' | 'disconnected', lastSync?: string) => {
+    const { data, error } = await supabase
+        .from('integrations')
+        .update({ status, last_sync: lastSync || new Date().toISOString() })
+        .eq('id', integrationId)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+};
+
+/**
  * Delete a client and all related data from Supabase
  */
 export const deleteClientFromDb = async (clientId: string) => {
@@ -293,12 +308,6 @@ export const updateClientPost = async (clientId: string, post: BlogPost) => {
     return { data, error };
 };
 
-export const updateIntegrationStatus = async (integrationId: string, status: string, lastSync: string) => {
-    return await supabase
-        .from('integrations')
-        .update({ status, last_sync: lastSync })
-        .eq('id', integrationId);
-};
 
 // --- Função de Seed (Povoar Banco) ---
 export const seedDatabase = async () => {

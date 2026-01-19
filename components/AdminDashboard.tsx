@@ -52,6 +52,49 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
   const [selectedClientForDetails, setSelectedClientForDetails] = useState<ClientData | null>(null);
   const [isClientDetailsOpen, setIsClientDetailsOpen] = useState(false);
 
+  // Column Widths for Resizable Columns
+  const [columnWidths, setColumnWidths] = useState<{ [key: string]: number }>({
+    cliente: 250,
+    contato: 250,
+    empresa: 180,
+    status: 120,
+    site: 200,
+    acoes: 100
+  });
+
+  const [resizing, setResizing] = useState<string | null>(null);
+
+  const startResizing = (columnId: string) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setResizing(columnId);
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizing) return;
+
+      const deltaX = e.movementX;
+      setColumnWidths(prev => ({
+        ...prev,
+        [resizing!]: Math.max(80, prev[resizing!] + deltaX)
+      }));
+    };
+
+    const handleMouseUp = () => {
+      setResizing(null);
+    };
+
+    if (resizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [resizing]);
+
   // Save active tab to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('adminActiveTab', activeTab);
@@ -433,25 +476,45 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
         {/* Table */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full" style={{ tableLayout: 'fixed' }}>
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  <th style={{ width: columnWidths.cliente }} className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider relative group border-r border-slate-100 last:border-r-0">
                     Cliente
+                    <div
+                      onMouseDown={startResizing('cliente')}
+                      className={`absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-indigo-500 transition-colors ${resizing === 'cliente' ? 'bg-indigo-600 w-0.5' : 'bg-transparent'}`}
+                    />
                   </th>
-                  <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  <th style={{ width: columnWidths.contato }} className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider relative group border-r border-slate-100 last:border-r-0">
                     Contato
+                    <div
+                      onMouseDown={startResizing('contato')}
+                      className={`absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-indigo-500 transition-colors ${resizing === 'contato' ? 'bg-indigo-600 w-0.5' : 'bg-transparent'}`}
+                    />
                   </th>
-                  <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  <th style={{ width: columnWidths.empresa }} className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider relative group border-r border-slate-100 last:border-r-0">
                     Empresa
+                    <div
+                      onMouseDown={startResizing('empresa')}
+                      className={`absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-indigo-500 transition-colors ${resizing === 'empresa' ? 'bg-indigo-600 w-0.5' : 'bg-transparent'}`}
+                    />
                   </th>
-                  <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  <th style={{ width: columnWidths.status }} className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider relative group border-r border-slate-100 last:border-r-0">
                     Status
+                    <div
+                      onMouseDown={startResizing('status')}
+                      className={`absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-indigo-500 transition-colors ${resizing === 'status' ? 'bg-indigo-600 w-0.5' : 'bg-transparent'}`}
+                    />
                   </th>
-                  <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  <th style={{ width: columnWidths.site }} className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider relative group border-r border-slate-100 last:border-r-0">
                     Site
+                    <div
+                      onMouseDown={startResizing('site')}
+                      className={`absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-indigo-500 transition-colors ${resizing === 'site' ? 'bg-indigo-600 w-0.5' : 'bg-transparent'}`}
+                    />
                   </th>
-                  <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  <th style={{ width: columnWidths.acoes }} className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
                     Ações
                   </th>
                 </tr>
@@ -467,37 +530,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
                     }}
                   >
                     {/* Cliente */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full ${getAvatarColor(client.name)} flex items-center justify-center text-white font-bold text-sm shadow-sm`}>
+                    <td className="px-6 py-4 truncate">
+                      <div className="flex items-center gap-3 overflow-hidden">
+                        <div className={`shrink-0 w-10 h-10 rounded-full ${getAvatarColor(client.name)} flex items-center justify-center text-white font-bold text-sm shadow-sm`}>
                           {getInitials(client.name)}
                         </div>
-                        <div>
-                          <p className="font-bold text-slate-800">{client.name}</p>
-                          <p className="text-xs text-slate-500">Cliente desde {formatDateBR(new Date())}</p>
+                        <div className="overflow-hidden">
+                          <p className="font-bold text-slate-800 truncate">{client.name}</p>
+                          <p className="text-xs text-slate-500 truncate">Cliente desde {formatDateBR(new Date())}</p>
                         </div>
                       </div>
                     </td>
 
                     {/* Contato */}
-                    <td className="px-6 py-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <Mail size={14} className="text-slate-400" />
-                          {client.email}
+                    <td className="px-6 py-4 truncate">
+                      <div className="space-y-1 overflow-hidden">
+                        <div className="flex items-center gap-2 text-sm text-slate-600 truncate">
+                          <Mail size={14} className="shrink-0 text-slate-400" />
+                          <span className="truncate">{client.email}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-slate-600">
-                          <Phone size={14} className="text-slate-400" />
-                          {formatPhoneBR('11999999999')}
+                        <div className="flex items-center gap-2 text-sm text-slate-600 truncate">
+                          <Phone size={14} className="shrink-0 text-slate-400" />
+                          <span className="truncate">{formatPhoneBR(client.phone || '11999999999')}</span>
                         </div>
                       </div>
                     </td>
 
                     {/* Empresa */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <Briefcase size={16} className="text-slate-400" />
-                        <span className="font-medium text-slate-700">{client.company}</span>
+                    <td className="px-6 py-4 truncate">
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        <Briefcase size={16} className="shrink-0 text-slate-400" />
+                        <span className="font-medium text-slate-700 truncate">{client.company}</span>
                       </div>
                     </td>
 
@@ -507,16 +570,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
                     </td>
 
                     {/* Site */}
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 truncate">
                       <a
                         href={`https://${client.siteUrl}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium text-sm hover:underline"
+                        className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium text-sm hover:underline truncate"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        {client.siteUrl}
-                        <ExternalLink size={14} />
+                        <span className="truncate">{client.siteUrl}</span>
+                        <ExternalLink size={14} className="shrink-0" />
                       </a>
                     </td>
 
