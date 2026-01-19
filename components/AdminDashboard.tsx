@@ -421,12 +421,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
               <button className="px-4 py-2 text-sm font-bold text-slate-600 hover:bg-slate-50 rounded-lg transition-colors">
                 <MoreVertical size={18} />
               </button>
-              <button
-                onClick={() => onSeedDatabase()}
-                className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors"
-              >
-                <Database size={18} /> Seed DB
-              </button>
             </div>
           </div>
         </div>
@@ -437,9 +431,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    <input type="checkbox" className="rounded border-slate-300" />
-                  </th>
                   <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
                     Cliente
                   </th>
@@ -467,13 +458,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
                     className="hover:bg-slate-50 transition-colors group cursor-pointer"
                     onClick={() => onSwitchToClientView(client)}
                   >
-                    <td className="px-6 py-4">
-                      <input
-                        type="checkbox"
-                        className="rounded border-slate-300"
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </td>
+                    {/* Cliente */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div className={`w-10 h-10 rounded-full ${getAvatarColor(client.name)} flex items-center justify-center text-white font-bold text-sm shadow-sm`}>
@@ -485,6 +470,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
                         </div>
                       </div>
                     </td>
+
+                    {/* Contato */}
                     <td className="px-6 py-4">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2 text-sm text-slate-600">
@@ -497,37 +484,59 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ clients, onSelec
                         </div>
                       </div>
                     </td>
+
+                    {/* Empresa */}
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <Briefcase size={16} className="text-slate-400" />
                         <span className="font-medium text-slate-700">{client.company}</span>
                       </div>
                     </td>
+
+                    {/* Status */}
                     <td className="px-6 py-4">
                       {getStatusBadge(client)}
                     </td>
+
+                    {/* Site */}
                     <td className="px-6 py-4">
                       <a
                         href={`https://${client.siteUrl}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium text-sm"
+                        className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium text-sm hover:underline"
                         onClick={(e) => e.stopPropagation()}
                       >
                         {client.siteUrl}
                         <ExternalLink size={14} />
                       </a>
                     </td>
+
+                    {/* Ações */}
                     <td className="px-6 py-4">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSwitchToClientView(client);
-                        }}
-                        className="px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-bold hover:bg-indigo-100 transition-colors opacity-0 group-hover:opacity-100"
-                      >
-                        Acessar
-                      </button>
+                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // TODO: Abrir modal de edição
+                            console.log('Edit client:', client.id);
+                          }}
+                          className="p-2 hover:bg-indigo-50 text-indigo-600 rounded-lg transition-colors"
+                          title="Editar cliente"
+                        >
+                          <Edit2 size={16} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteClient(client.id);
+                          }}
+                          className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
+                          title="Excluir cliente"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
